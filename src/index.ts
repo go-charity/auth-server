@@ -1,10 +1,5 @@
-import express from "express";
-import { config } from "dotenv";
-import cors from "cors";
+import app from "./app";
 
-config();
-
-const app = express();
-app.use(cors());
-
-app.listen(5000, () => console.log("Auth server listening on port 5000"));
+app.listen(process.env.PORT || 5000, () =>
+  console.log(`Auth server listening on port ${process.env.PORT || 5000}`)
+);

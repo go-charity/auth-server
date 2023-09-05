@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<coverage generated="1693837040115" clover="3.2.0">
+  <project timestamp="1693837040115" name="All files">
+    <metrics statements="57" coveredstatements="53" conditionals="48" coveredconditionals="38" methods="30" coveredmethods="23" elements="135" coveredelements="114" complexity="0" loc="57" ncloc="57" packages="2" files="3" classes="3"/>
+    <package name="models">
+      <metrics statements="23" coveredstatements="23" conditionals="29" coveredconditionals="24" methods="11" coveredmethods="10"/>
+      <file name="RefrestTokens.js" path="C:\Users\LENOVO\Documents\Programming\products\go.charity\auth-server\dev\models\RefrestTokens.js">
+        <metrics statements="7" coveredstatements="7" conditionals="9" coveredconditionals="7" methods="1" coveredmethods="1"/>
+        <line num="2" count="1" type="cond" truecount="3" falsecount="0"/>
+        <line num="3" count="1" type="cond" truecount="3" falsecount="1"/>
+        <line num="5" count="1" type="stmt"/>
+        <line num="6" count="1" type="stmt"/>
+        <line num="7" count="1" type="stmt"/>
+        <line num="14" count="1" type="stmt"/>
+        <line num="15" count="1" type="cond" truecount="1" falsecount="1"/>
+      </file>
+      <file name="db.config.js" path="C:\Users\LENOVO\Documents\Programming\products\go.charity\auth-server\dev\models\db.config.js">
+        <metrics statements="16" coveredstatements="16" conditionals="20" coveredconditionals="17" methods="10" coveredmethods="9"/>
+        <line num="2" count="1" type="cond" truecount="3" falsecount="0"/>
+        <line num="3" count="3" type="cond" truecount="1" falsecount="1"/>
+        <line num="4" count="3" type="cond" truecount="2" falsecount="0"/>
+        <line num="5" count="2" type="stmt"/>
+        <line num="6" count="1" type="stmt"/>
+        <line num="7" count="5" type="cond" truecount="2" falsecount="0"/>
+        <line num="8" count="3" type="cond" truecount="2" falsecount="0"/>
+        <line num="11" count="1" type="cond" truecount="3" falsecount="0"/>
+        <line num="12" count="1" type="cond" truecount="3" falsecount="1"/>
+        <line num="14" count="1" type="stmt"/>
+        <line num="16" count="1" type="stmt"/>
+        <line num="17" count="3" type="stmt"/>
+        <line num="18" count="3" type="stmt"/>
+        <line num="19" count="2" type="cond" truecount="1" falsecount="1"/>
+        <line num="20" count="2" type="stmt"/>
+        <line num="22" count="1" type="stmt"/>
+      </file>
+    </package>
+    <package name="utils">
+      <metrics statements="34" coveredstatements="30" conditionals="19" coveredconditionals="14" methods="19" coveredmethods="13"/>
+      <file name="utils.js" path="C:\Users\LENOVO\Documents\Programming\products\go.charity\auth-server\dev\utils\utils.js">
+        <metrics statements="34" coveredstatements="30" conditionals="19" coveredconditionals="14" methods="19" coveredmethods="13"/>
+        <line num="2" count="1" type="cond" truecount="3" falsecount="0"/>
+        <line num="3" count="0" type="cond" truecount="0" falsecount="2"/>
+        <line num="4" count="22" type="cond" truecount="2" falsecount="0"/>
+        <line num="5" count="0" type="stmt"/>
+        <line num="6" count="0" type="stmt"/>
+        <line num="7" count="17" type="cond" truecount="1" falsecount="1"/>
+        <line num="8" count="22" type="cond" truecount="2" falsecount="0"/>
+        <line num="11" count="1" type="cond" truecount="3" falsecount="0"/>
+        <line num="12" count="1" type="cond" truecount="3" falsecount="1"/>
+        <line num="14" count="1" type="stmt"/>
+        <line num="15" count="1" type="stmt"/>
+        <line num="16" count="1" type="stmt"/>
+        <line num="17" count="1" type="stmt"/>
+        <line num="18" count="1" type="stmt"/>
+        <line num="24" count="1" type="stmt"/>
+        <line num="25" count="1" type="stmt"/>
+        <line num="31" count="1" type="stmt"/>
+        <line num="32" count="1" type="stmt"/>
+        <line num="39" count="6" type="stmt"/>
+        <line num="40" count="6" type="stmt"/>
+        <line num="42" count="1" type="stmt"/>
+        <line num="49" count="5" type="stmt"/>
+        <line num="50" count="5" type="stmt"/>
+        <line num="51" count="0" type="stmt"/>
+        <line num="53" count="1" type="stmt"/>
+        <line num="60" count="5" type="stmt"/>
+        <line num="61" count="5" type="stmt"/>
+        <line num="63" count="1" type="stmt"/>
+        <line num="70" count="6" type="stmt"/>
+        <line num="71" count="6" type="stmt"/>
+        <line num="73" count="1" type="stmt"/>
+        <line num="82" count="1" type="cond" truecount="0" falsecount="1"/>
+        <line num="83" count="3" type="stmt"/>
+        <line num="85" count="1" type="stmt"/>
+      </file>
+    </package>
+  </project>
+</coverage>

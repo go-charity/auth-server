@@ -1,0 +1,44 @@
+"use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.registerUser = void 0;
+const utils_1 = require("../utils/utils");
+const registerUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    // Validate the body being passed to the request
+    const result = (0, utils_1.validateObjectProperties)(req.body, {
+        keys: ["user_type", "government_ID", "email", "password"],
+        strict: false,
+        returnMissingKeys: true,
+    });
+    if (!result || (typeof result === "object" && !result.valid)) {
+        return res
+            .status(400)
+            .json(`Invalid body passed. ${typeof result === "object"
+            ? `Missing properties are: ${result.missingKeys.join(", ")}`
+            : ""}`);
+    }
+    try {
+        yield (0, utils_1.createNewUser)(req.body);
+        return res.status(201).json(`User created successfully`);
+    }
+    catch (e) {
+        console.log("ERROR MSG: ", e.message);
+        // If the user already exists
+        if (String(e.message).includes("code") &&
+            ((_a = JSON.parse(e.message)) === null || _a === void 0 ? void 0 : _a.code) === 409)
+            return res
+                .status(409)
+                .json(`User with email '${req.body.email}' already exists`);
+        return res.status(500).json(`Something went wrong`);
+    }
+});
+exports.registerUser = registerUser;

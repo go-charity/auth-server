@@ -1,0 +1,365 @@
+"use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.validateApiKey = exports.createNewUser = exports.addDaysToDate = exports.refreshAccessToken = exports.generateRefreshToken = exports.validateAccessToken = exports.generateAccessToken = exports.generateTokens = exports.validateObjectProperties = exports.validateUserClaim = exports.UserModelClass = exports.RefreshTokenModelClass = exports.TokenResponseClass = exports.ErrorMsg = exports.convertFrombase64 = exports.convertTobase64 = exports.jwtSecret = exports.apiKey = void 0;
+const bcrypt_1 = __importDefault(require("bcrypt"));
+const uuid_1 = require("uuid");
+const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const RefrestTokens_1 = __importDefault(require("../models/RefrestTokens"));
+const Users_1 = __importDefault(require("../models/Users"));
+exports.apiKey = "fe132312b2fb42bebb044162ef40e3ce";
+exports.jwtSecret = "88141db444b743a0bf17bbad8f7f2b48";
+/**
+ * Converts a utf-8 string to a base64 string
+ * @param value utf-8 string
+ * @returns base64 string
+ */
+const convertTobase64 = (value) => Buffer.from(value).toString("base64");
+exports.convertTobase64 = convertTobase64;
+/**
+ * Converts a base64 string to a utf-8 string
+ * @param value base64 string
+ * @returns utf-8 string
+ */
+const convertFrombase64 = (value) => Buffer.from(value, "base64").toString("utf-8");
+exports.convertFrombase64 = convertFrombase64;
+class ErrorMsg {
+    constructor(code, message) {
+        this.code = code;
+        this.message = message;
+    }
+}
+exports.ErrorMsg = ErrorMsg;
+class TokenResponseClass {
+    constructor(access_token, refresh_token) {
+        this.access_token = access_token;
+        this.refresh_token = refresh_token;
+    }
+}
+exports.TokenResponseClass = TokenResponseClass;
+class RefreshTokenModelClass {
+    constructor(id, user_ID, expires_in, valid_days, user_role) {
+        this.id = id;
+        this.user_ID = user_ID;
+        this.expires_in = expires_in;
+        this.valid_days = valid_days;
+        this.user_role = user_role;
+    }
+}
+exports.RefreshTokenModelClass = RefreshTokenModelClass;
+class UserModelClass {
+    constructor(user_type, government_ID, email, password, authenticated) {
+        this.user_type = user_type;
+        this.government_ID = government_ID;
+        this.email = email;
+        this.password = password;
+        this.authenticated = authenticated;
+    }
+}
+exports.UserModelClass = UserModelClass;
+/**
+ * Validates the data/claim passed to the access and refresh tokens, and throws an error if parameters are not valid
+ * @example validateUserClaim({user_ID: "prince2006", user_role: "donor"}, ["user_ID", "user_role"])
+ * @param data {user_ID: String, user_role: String} | user_ID: The ID of the user | user_role: The role of the user e.g orphanage/donor
+ * @param options The list of keys to validate
+ * @returns void
+ */
+const validateUserClaim = (data, options) => {
+    // Validate if the parameter passed is a valid object
+    if (typeof data !== "object")
+        throw new TypeError(`Expected a 'TokenDataType' type instead got a '${typeof data}'`);
+    const keyIterator = Array.isArray(options)
+        ? options
+        : typeof options === "object"
+            ? options.keys
+            : undefined;
+    // Validate the options parameter
+    if (typeof keyIterator === "undefined")
+        throw new TypeError(`Expected the key property to be either an array or an object, instead got a '${typeof options}'`);
+    // Loop through all specified keys
+    for (const key of keyIterator) {
+        // Validate if the object passed as a parameter contains the current key
+        if (!Object.keys(data).includes(key)) {
+            throw new Error(`Expected the '${key}' parameter`);
+        }
+    }
+};
+exports.validateUserClaim = validateUserClaim;
+/**
+ * Validates the properties of an object
+ * @example validateObjectProperties({name: "prince", password: "123456"}, ["name", "password"])
+ * @example validateObjectProperties({name: "prince", password: "123456"}, {keys: ["name", "password"], strict: true})
+ * @example validateObjectProperties({name: "prince", password: "123456"}, {keys: ["name", "password"], returnMissingKeys: true})
+ * @param data The object to be validated
+ * @param options The list of keys to validate
+ * @returns true or false or object containing the missing keys
+ */
+const validateObjectProperties = (data, options) => {
+    let returnValue = !Array.isArray(options) && options.returnMissingKeys === true
+        ? { valid: true, missingKeys: [] }
+        : true;
+    const missingkeys = [];
+    // Validate if the parameter passed is a valid object
+    if (typeof data !== "object")
+        throw new TypeError(`Expected an 'object' type instead got a '${typeof data}'`);
+    // Validate if the parameter passed is an array, if it is throw an error
+    if (Array.isArray(data))
+        throw new TypeError(`Expected an 'object' type instead got an 'array'`);
+    const keyIterator = Array.isArray(options)
+        ? options
+        : typeof options === "object"
+            ? options.keys
+            : undefined;
+    // Validate the options parameter
+    if (typeof keyIterator === "undefined")
+        throw new TypeError(`Expected the key property to be either an array or an object, instead got a '${typeof options}'`);
+    // Loop through all specified keys
+    for (const key of keyIterator) {
+        // Validate if the object passed as a parameter contains the current key
+        if (!Object.keys(data).includes(key)) {
+            // If the strict property is set to true
+            if (!Array.isArray(options) && options.strict === true)
+                missingkeys.push(key);
+            // If the returnMissingKeys property is set to true return an object
+            if (!Array.isArray(options) && options.returnMissingKeys === true) {
+                if (typeof returnValue === "object") {
+                    returnValue.valid = false;
+                    Array.isArray(returnValue.missingKeys)
+                        ? returnValue.missingKeys.push(key)
+                        : (returnValue.missingKeys = []);
+                }
+                else
+                    returnValue = { valid: false, missingKeys: [key] };
+            }
+            // Else return a bollean
+            else
+                returnValue = false;
+            console.error(`Expected the '${key}' parameter`);
+        }
+    }
+    // If the strict property is set to true
+    if (!Array.isArray(options) &&
+        missingkeys.length > 0 &&
+        options.strict === true)
+        throw new Error(`Expected the ${missingkeys
+            .map((key) => `'${key}'`)
+            .join(", ")} parameters`);
+    return returnValue;
+};
+exports.validateObjectProperties = validateObjectProperties;
+// /**
+//  *
+//  * @param body Consists of the response body to validate, the keys to validate and the response object
+//  * @returns
+//  */
+// export const validateRequestBody = ({
+//   data,
+//   keys,
+//   response,
+// }: {
+//   data: Record<any, any>;
+//   keys: string[];
+//   response: Response;
+// }) => {
+//   // Validate the body being passed to the request
+//   const result = validateObjectProperties(data, {
+//     keys: keys,
+//     strict: false,
+//     returnMissingKeys: true,
+//   });
+//   if (!result || (typeof result === "object" && !result.valid)) {
+//     return response
+//       .status(400)
+//       .json(
+//         `Invalid body passed. ${
+//           Array.isArray(result)
+//             ? `Missing properties are: ${result.join(", ")}`
+//             : ""
+//         }`
+//       );
+//   }
+// };
+/**
+ * Throws a new error with a particular format
+ * @param ErrorType The type of error to throw
+ * @param code the code of the error
+ * @param message The error message
+ */
+const throwError = (ErrorType, code, message) => {
+    throw new ErrorType(JSON.stringify(new ErrorMsg(code, message)));
+};
+/**
+ * Generates the access and refresh token for a user
+ * @example generateTokens({user_ID: "prince2006", user_role: "donor"})
+ * @param data {user_ID: String, user_role: String} | user_ID: The ID of the user | user_role: The role of the user e.g orphanage/donor
+ * @returns JWT signed access and refresh tokens
+ */
+const generateTokens = (data) => __awaiter(void 0, void 0, void 0, function* () {
+    const accessToken = (0, exports.generateAccessToken)(data);
+    const refreshToken = yield (0, exports.generateRefreshToken)(data);
+    return { accessToken, refreshToken };
+});
+exports.generateTokens = generateTokens;
+/**
+ * Generates the access token for a user
+ * @example generateAccessToken({user_ID: "prince2006", user_role: "donor"})
+ * @param data {user_ID: String, user_role: String} | user_ID: The ID of the user | user_role: The role of the user e.g orphanage/donor
+ * @returns JWT signed access token
+ */
+const generateAccessToken = (data) => {
+    // Validate the 'data' parameter
+    (0, exports.validateUserClaim)(data, ["user_ID", "user_role"]);
+    // generate the access token
+    const access_token = jsonwebtoken_1.default.sign(data, exports.jwtSecret, { expiresIn: 60 * 5 });
+    // console.log("ACCESS TOKEN: ", access_token);
+    return access_token;
+};
+exports.generateAccessToken = generateAccessToken;
+/**
+ * Validate the access token of a request
+ * @example validateAccessToken(eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c)
+ * @param token The token to validate
+ * @returns true if valid, and false if invalid
+ */
+const validateAccessToken = (token) => {
+    if (typeof token !== "string")
+        throw new Error(`Expected the token parameter to be a 'string', but instead got a '${typeof token}'`);
+    try {
+        // validate the access token
+        jsonwebtoken_1.default.verify(token, exports.jwtSecret);
+        return true;
+    }
+    catch (error) {
+        return false;
+    }
+};
+exports.validateAccessToken = validateAccessToken;
+/**
+ * Generates the refresh token for a user, and inserts it inot the database
+ * @example generateRefreshToken({user_ID: "prince2006", user_role: "donor"})
+ * @param data {user_ID: String, user_role: String} | user_ID: The ID of the user | user_role: The role of the user e.g orphanage/donor
+ * @returns Refresh token ID
+ */
+const generateRefreshToken = (data) => __awaiter(void 0, void 0, void 0, function* () {
+    // Validate the 'data' parameter
+    (0, exports.validateUserClaim)(data, ["user_ID", "user_role"]);
+    const refreshTokenID = (0, uuid_1.v4)().split("-").join("");
+    const createRefreshToken = yield RefrestTokens_1.default.create(Object.assign(Object.assign({ id: refreshTokenID }, data), { expires_in: (0, exports.addDaysToDate)(undefined, 30), valid_days: 30 }));
+    if (!createRefreshToken)
+        throw new Error("An error occured while creating the refresh token");
+    return refreshTokenID;
+});
+exports.generateRefreshToken = generateRefreshToken;
+/**
+ * Generates the access token for a userRefreshes a user's access token
+ * @example refreshAccessToken({user_ID: "prince2006", user_role: "donor"})
+ * @param refreshTokenID The refresh token which will be used to refresh the access token
+ * @returns JWT signed access token and new refresh token
+ */
+const refreshAccessToken = (refreshTokenID) => __awaiter(void 0, void 0, void 0, function* () {
+    // Calidate the 'refreshTokenID' parameter
+    if (typeof refreshTokenID !== "string")
+        throw new TypeError(`Expected the 'refreshToken' parameter to be a string instead got type '${typeof refreshTokenID}'`);
+    // Retrieve the refreshToken
+    const initialRefreshToken = yield RefrestTokens_1.default.findOne({ id: refreshTokenID });
+    // Throw error if refreshToken not found
+    if (!initialRefreshToken)
+        return throwError(Error, 401, `Refresh token with ID '${refreshTokenID}', doesn't exist`);
+    // Throw error if refreshToken is expired
+    if (new Date(initialRefreshToken.expires_in) <= new Date())
+        throwError(Error, 401, "Invalid refresh token ID");
+    // Delete the previous refreshToken
+    yield RefrestTokens_1.default.deleteMany({ id: refreshTokenID });
+    const data = {
+        user_ID: initialRefreshToken === null || initialRefreshToken === void 0 ? void 0 : initialRefreshToken.user_ID,
+        user_role: initialRefreshToken === null || initialRefreshToken === void 0 ? void 0 : initialRefreshToken.user_role,
+    };
+    // Create new access and refresh tokens (based on the data of the previous refresh token)
+    const accessToken = (0, exports.generateAccessToken)(data);
+    const newRefreshTokenID = (0, uuid_1.v4)().split("-").join("");
+    const newRefreshToken = yield RefrestTokens_1.default.create(Object.assign(Object.assign({ id: newRefreshTokenID }, data), { expires_in: initialRefreshToken === null || initialRefreshToken === void 0 ? void 0 : initialRefreshToken.expires_in, valid_days: 30 }));
+    // Throw error if refresh token couldn't be created
+    if (!newRefreshToken)
+        throw new Error("Could't create new refresh token");
+    return { accessToken: accessToken, refreshToken: newRefreshTokenID };
+});
+exports.refreshAccessToken = refreshAccessToken;
+/**
+ * Adds x number of days to a date
+ * @example addDaysToDate(new Date().getTime(), 10)
+ * @example addDaysToDate(10)
+ * @param initialDate initial date in miliseconds
+ * @param daysToAdd number of days to add
+ * @returns new date
+ */
+const addDaysToDate = (initialDate = new Date().getTime(), daysToAdd) => {
+    // Check if the initialDate parameter was passed but isn't a valid date
+    if (initialDate !== null &&
+        initialDate !== undefined &&
+        new Date(initialDate).toDateString() === "Invalid Date")
+        throw new TypeError(`Invalid date specified`);
+    // Check if the daysToAdd parameter isn't a valid number
+    if (typeof daysToAdd !== "number")
+        throw new TypeError(`Value passed into the 'daysToAdd' parameter is not a number`);
+    const currentDate = initialDate ? new Date(initialDate) : new Date();
+    currentDate.setDate(currentDate.getDate() + daysToAdd);
+    return currentDate;
+};
+exports.addDaysToDate = addDaysToDate;
+/**
+ * Creates a new user in the database if user with the provided email address doesn't exist
+ * @param userDetails The details of the user to be created
+ * @returns the created user
+ */
+const createNewUser = (userDetails) => __awaiter(void 0, void 0, void 0, function* () {
+    // Validate details
+    (0, exports.validateObjectProperties)(userDetails, {
+        keys: ["user_type", "government_ID", "email", "password"],
+        strict: true,
+        returnMissingKeys: true,
+    });
+    const existingUser = yield Users_1.default.findOne({
+        email: userDetails.email,
+    });
+    if (existingUser)
+        throwError(Error, 409, `User with email '${userDetails.email}' already exists`);
+    const newUser = yield Users_1.default.create({
+        user_type: userDetails.user_type,
+        government_ID: userDetails.user_type === "orphanage"
+            ? userDetails.government_ID
+            : undefined,
+        email: userDetails.email,
+        password: yield bcrypt_1.default.hash((0, exports.convertFrombase64)(userDetails.password), 10),
+        authenticated: false,
+    });
+    if (!newUser)
+        throw new Error("Could not create new user");
+    return newUser;
+});
+exports.createNewUser = createNewUser;
+/**
+ * Validate if a request comes with a valid api key
+ * @param req The express request object
+ * @param res The express response object
+ * @param next The express next function
+ * @returns void
+ */
+const validateApiKey = (req, res, next) => {
+    if (!Object.keys(req.headers).includes("api-key"))
+        return res.status(401).json("Invalid api key");
+    if ((0, exports.convertFrombase64)(req.headers["api-key"]) !== exports.apiKey)
+        return res.status(401).json("Invalid api key");
+    next();
+};
+exports.validateApiKey = validateApiKey;
