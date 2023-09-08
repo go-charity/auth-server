@@ -17,10 +17,10 @@ const app = express();
 
 const allowedOrigins = [
   process.env.CLIENT_DOMAIN,
-  process.env.CLIENT_SUB_DOMAIN,
+  process.env.CLIENT_AUTH_SUB_DOMAIN,
 ];
 
-app.use(cookieParser(apiKey));
+app.use(cookieParser());
 app.use(
   cors({
     origin: (origin, cb) => {
