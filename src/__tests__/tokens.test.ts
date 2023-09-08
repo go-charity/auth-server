@@ -111,9 +111,12 @@ describe("Test cases responsible for testing the access and refresh token genera
     test("Should return 'false' if invalid token is passed", () => {
       expect(validateAccessToken("")).toBe(false);
     });
-    test("Should return 'true' if a valid token is passed", () => {
+    test("Should return token details if a valid token is passed", () => {
       const accessToken = generateAccessToken(authData);
-      expect(validateAccessToken(accessToken)).toBe(true);
+      expect(
+        (validateAccessToken(accessToken) as jwt.JwtPayload & TokenDataType)
+          ?.user_ID
+      ).toBe(authData.user_ID);
     });
   });
 

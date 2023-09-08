@@ -10,9 +10,12 @@ import { v4 as uuidv4 } from "uuid";
 import jwt from "jsonwebtoken";
 import RefrestTokenModel from "../models/RefrestTokens";
 import UserModel from "../models/Users";
+import nodemailer from "nodemailer";
+import Mail from "nodemailer/lib/mailer";
 
 export const apiKey = "fe132312b2fb42bebb044162ef40e3ce";
 export const jwtSecret = "88141db444b743a0bf17bbad8f7f2b48";
+export const otpJwtSecret = "79ecc06ccddf4a68ba9b85442df62975";
 
 /**
  * Converts a utf-8 string to a base64 string
@@ -55,6 +58,14 @@ export class UserModelClass {
     public email: string,
     public password: string,
     public authenticated: boolean
+  ) {}
+}
+
+export class OTPModelClass {
+  constructor(
+    public email: string,
+    public token: string,
+    public expires_in: Date
   ) {}
 }
 
@@ -240,13 +251,21 @@ export const generateTokens = async (
  * Generates the access token for a user
  * @example generateAccessToken({user_ID: "prince2006", user_role: "donor"})
  * @param data {user_ID: String, user_role: String} | user_ID: The ID of the user | user_role: The role of the user e.g orphanage/donor
+ * @param secret The secret which should be used to generate an access token, if undefined - the default secret is used
+ * @param expiresIn The timeframe for which the access token should last, if undefined - the default timeframe is used
  * @returns JWT signed access token
  */
-export const generateAccessToken = (data: TokenDataType): string => {
+export const generateAccessToken = (
+  data: TokenDataType,
+  secret?: string,
+  expiresIn?: number
+): string => {
   // Validate the 'data' parameter
   validateUserClaim(data, ["user_ID", "user_role"]);
   // generate the access token
-  const access_token = jwt.sign(data, jwtSecret, { expiresIn: 60 * 5 });
+  const access_token = jwt.sign(data, secret || jwtSecret, {
+    expiresIn: expiresIn || 60 * 5,
+  });
   // console.log("ACCESS TOKEN: ", access_token);
   return access_token;
 };
@@ -254,10 +273,15 @@ export const generateAccessToken = (data: TokenDataType): string => {
 /**
  * Validate the access token of a request
  * @example validateAccessToken(eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c)
+ * @example validateAccessToken(eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c, 'secret key')
  * @param token The token to validate
+ * @param secret The secret key used to generate the token, if undefined - the default key is used
  * @returns true if valid, and false if invalid
  */
-export const validateAccessToken = (token: string): boolean => {
+export const validateAccessToken = (
+  token: string,
+  secret?: string
+): boolean | (jwt.JwtPayload & TokenDataType) => {
   if (typeof token !== "string")
     throw new Error(
       `Expected the token parameter to be a 'string', but instead got a '${typeof token}'`
@@ -265,8 +289,11 @@ export const validateAccessToken = (token: string): boolean => {
 
   try {
     // validate the access token
-    jwt.verify(token, jwtSecret);
-    return true;
+    const decryptedToken = jwt.verify(
+      token,
+      secret || jwtSecret
+    ) as jwt.JwtPayload & TokenDataType;
+    return decryptedToken;
   } catch (error) {
     return false;
   }
@@ -387,6 +414,38 @@ export const addDaysToDate = (
 };
 
 /**
+ * Adds x number of days to a date
+ * @example addTimeToDate(new Date().getTime(), 60 * 60)
+ * @example addTimeToDate(60 * 60)
+ * @param initialDate initial date in miliseconds
+ * @param secondsToAdd amount of seconds to add
+ * @returns new date
+ */
+export const addTimeToDate = (
+  initialDate: string | Date | number | null | undefined = new Date().getTime(),
+  secondsToAdd: number
+): Date => {
+  // Check if the initialDate parameter was passed but isn't a valid date
+  if (
+    initialDate !== null &&
+    initialDate !== undefined &&
+    new Date(initialDate).toDateString() === "Invalid Date"
+  )
+    throw new TypeError(`Invalid date specified`);
+
+  // Check if the daysToAdd parameter isn't a valid number
+  if (typeof secondsToAdd !== "number")
+    throw new TypeError(
+      `Value passed into the 'secondsToAdd' parameter is not a number`
+    );
+
+  const currentDate = initialDate ? new Date(initialDate) : new Date();
+  currentDate.setSeconds(currentDate.getSeconds() + secondsToAdd);
+
+  return currentDate;
+};
+
+/**
  * Creates a new user in the database if user with the provided email address doesn't exist
  * @param userDetails The details of the user to be created
  * @returns the created user
@@ -419,7 +478,7 @@ export const createNewUser = async (userDetails: {
     government_ID:
       userDetails.user_type === "orphanage"
         ? userDetails.government_ID
-        : undefined,
+        : "NULL",
     email: userDetails.email,
     password: await bcrypt.hash(convertFrombase64(userDetails.password), 10),
     authenticated: false,
@@ -448,4 +507,91 @@ export const validateApiKey = (
     return res.status(401).json("Invalid api key");
 
   next();
+};
+
+/**
+ * Generate a random 6 digit string
+ * @returns A random 6 digit string
+ */
+export const generateRandom6digitString = () => {
+  let gen = (n: number) =>
+    [...Array(n)].map((_) => (Math.random() * 10) | 0).join("");
+
+  // TEST: generate 6 digit number
+  // first number can't be zero - so we generate it separatley
+  let sixDigitStr = ((1 + Math.random() * 9) | 0) + gen(5);
+
+  return sixDigitStr;
+};
+
+/**
+ * Generates a HTML email template for the OTP token
+ * @param token The generated token to be sent to the user's email
+ * @returns
+ */
+export const getOTPEmailTemplate = (token: string) => {
+  return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+  <html xmlns="http://www.w3.org/1999/xhtml">
+  
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify your login</title>
+    <!--[if mso]><style type="text/css">body, table, td, a { font-family: Arial, Helvetica, sans-serif !important; }</style><![endif]-->
+  </head>
+  
+  <body style="font-family: Helvetica, Arial, sans-serif; margin: 0px; padding: 0px; background-color: rgba(254,195,205, 0.5);">
+    <table role="presentation"
+      style="width: 100%; border-collapse: collapse; border: 0px; border-spacing: 0px; font-family: Arial, Helvetica, sans-serif; background-color: rgb(239, 239, 239);">
+      <tbody>
+        <tr>
+          <td align="center" style="padding: 1rem 2rem; vertical-align: top; width: 100%;">
+            <table role="presentation" style="max-width: 600px; border-collapse: collapse; border: 0px; border-spacing: 0px; text-align: left;">
+              <tbody>
+                <tr>
+                  <td style="padding: 40px 0px 0px;">
+                    <div style="text-align: left;">
+                      <div style="padding-bottom: 20px;"><img src="https://go-charity.vercel.app/_next/static/media/logo.ffaf4ffc.png" alt="Company" style="width: 56px;"></div>
+                    </div>
+                    <div style="padding: 20px; background-color: rgb(255, 255, 255);">
+                      <div style="color: rgb(0, 0, 0); text-align: left;">
+                        <h1 style="margin: 1rem 0">Email verification code</h1>
+                        <p style="padding-bottom: 16px">Please use the verification code below to sign in.</p>
+                        <p style="padding-bottom: 16px"><strong style="font-size: 130%; color: #4d041c;">${token}</strong></p>
+                        <p style="padding-bottom: 16px">If you didn’t request this, you can ignore this email.</p>
+                        <p style="padding-bottom: 16px">Love from <br>The GO.Charity team</p>
+                      </div>
+                    </div>
+                    
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </body>
+  
+  </html>`;
+};
+
+/**
+ * function responsible for sending mail to a particular email address
+ * @param content The object containing the details of the email to be sent like 'from' and 'to' addresses, the email 'subject' and 'bosy'
+ * @returns an array in which the first element is 'true' if the email was sent successfully and 'false' otherwise
+ */
+export const sendmail = async (content: Mail.Options) => {
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.MAIL_ACCOUNT_EMAIL,
+      pass: process.env.MAIL_ACCOUNT_PASSWORD,
+    },
+  });
+
+  const response = await transporter.sendMail(content);
+
+  if (response.accepted) return [true, response.response];
+  else return [false, response.rejected];
 };

@@ -27,8 +27,23 @@ const registerUser = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             : ""}`);
     }
     try {
-        yield (0, utils_1.createNewUser)(req.body);
-        return res.status(201).json(`User created successfully`);
+        const user = yield (0, utils_1.createNewUser)(req.body);
+        // sign otp access token
+        const accessToken = (0, utils_1.generateAccessToken)({
+            user_ID: user._id,
+            user_role: user.user_type,
+        }, utils_1.otpJwtSecret, 60 * 60);
+        // Set the access token to the response cookies
+        res.cookie("otp_access_token", accessToken, {
+            path: "/v1/otp",
+            domain: process.env.API_DOMAIN,
+            httpOnly: true,
+            secure: true,
+        });
+        return res.status(201).json({
+            message: "User created successfully",
+            access_token: accessToken,
+        });
     }
     catch (e) {
         console.log("ERROR MSG: ", e.message);

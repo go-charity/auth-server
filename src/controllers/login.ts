@@ -5,7 +5,9 @@ import bcrypt from "bcrypt";
 import {
   TokenResponseClass,
   convertFrombase64,
+  generateAccessToken,
   generateTokens,
+  otpJwtSecret,
   validateObjectProperties,
 } from "../utils/utils";
 
@@ -38,13 +40,45 @@ export const loginUser = async (req: Request, res: Response) => {
   );
   // Validate the user's details
   if (!passwordisValid) return res.status(401).json("Invalid credentials");
-  if (user.authenticated === false || !user.authenticated)
+  if (user.authenticated === false || !user.authenticated) {
+    // sign otp access token
+    const accessToken = generateAccessToken(
+      {
+        user_ID: user._id as any,
+        user_role: user.user_type,
+      },
+      otpJwtSecret,
+      60 * 60
+    );
+
+    // Set the access token to the response cookies
+    res.cookie("otp_access_token", accessToken, {
+      path: "/v1/otp",
+      domain: process.env.API_DOMAIN,
+      httpOnly: true,
+      secure: true,
+    });
     return res.status(403).json("Unverified email address");
+  }
 
   // sign jwt and refresh token
   const tokenObj = await generateTokens({
     user_ID: user._id as any,
     user_role: user.user_type,
+  });
+
+  // Set the access and refresh tokens as cookies
+  res.cookie("access_token", tokenObj.accessToken, {
+    path: "/",
+    domain: process.env.API_DOMAIN,
+    httpOnly: true,
+    secure: true,
+  });
+  res.cookie("refresh_token", tokenObj.refreshToken, {
+    path: "/",
+    domain: process.env.API_DOMAIN,
+    httpOnly: true,
+    secure: true,
   });
 
   return res

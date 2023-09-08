@@ -8,10 +8,33 @@ describe("Test cases responsible for the register endpoint", () => {
   beforeEach(async () => {
     await UserModel.deleteMany({});
   });
+  afterAll(async () => {
+    await UserModel.deleteMany({});
+  });
 
   test("Should return 401 status code if request is sent without a valid API key", async () => {
     const res = await request(app)
       .post("/v1/register")
+      .send(
+        new UserModelClass(
+          "orphanage",
+          "1u92u99uh",
+          "onukwilip@gmail.com",
+          "1234567",
+          false
+        )
+      );
+
+    expect(res.statusCode).toBe(401);
+    const data = res.body as {};
+    expect(data.toString().toLowerCase()).toContain(
+      "invalid api key".toLowerCase()
+    );
+  });
+  test("Should return 401 status code if request is sent with an invalid API key", async () => {
+    const res = await request(app)
+      .post("/v1/register")
+      .set("Api-key", convertTobase64("peepee"))
       .send(
         new UserModelClass(
           "orphanage",
@@ -71,5 +94,26 @@ describe("Test cases responsible for the register endpoint", () => {
     expect(data.toString().toLowerCase()).toContain(
       "missing properties are: user_type, government_ID, password".toLowerCase()
     );
+  });
+  test("Should return 201 status code and otp access token upon creation of a new user", async () => {
+    const res = await request(app)
+      .post("/v1/register")
+      .set("Api-key", convertTobase64(apiKey))
+      .send(
+        new UserModelClass(
+          "orphanage",
+          "119u88hshsaj",
+          "onukwilip@gmail.com",
+          "1234567",
+          false
+        )
+      );
+
+    expect(res.statusCode).toBe(201);
+    const data = res.body as { message: string; access_token: string };
+    expect(data.message.toString().toLowerCase()).toContain(
+      "User created successfully".toLowerCase()
+    );
+    expect(typeof data.access_token).toBe("string");
   });
 });

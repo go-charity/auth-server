@@ -13,9 +13,28 @@ describe("Test cases responsible for the login endpoint", () => {
   beforeEach(async () => {
     await UserModel.deleteMany({});
   });
+  afterAll(async () => {
+    await UserModel.deleteMany({});
+  });
+
   test("Should return 401 status code if request is sent without a valid API key", async () => {
     const res = await request(app)
       .post("/v1/login")
+      .send({
+        email: "onukwilip@gmail.com",
+        password: convertTobase64("123456"),
+      });
+
+    expect(res.statusCode).toBe(401);
+    const data = res.body as {};
+    expect(data.toString().toLowerCase()).toContain(
+      "invalid api key".toLowerCase()
+    );
+  });
+  test("Should return 401 status code if request is sent with an invalid API key", async () => {
+    const res = await request(app)
+      .post("/v1/login")
+      .set("Api-key", convertTobase64("peepee"))
       .send({
         email: "onukwilip@gmail.com",
         password: convertTobase64("123456"),
@@ -82,7 +101,7 @@ describe("Test cases responsible for the login endpoint", () => {
     );
   });
   test("Should return 200 status code with the access and refresh tokens!", async () => {
-    await UserModel.create(
+    const user = await UserModel.create(
       new UserModelClass(
         "orphanage",
         "119u88hshsaj",

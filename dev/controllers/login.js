@@ -38,12 +38,38 @@ const loginUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     // Validate the user's details
     if (!passwordisValid)
         return res.status(401).json("Invalid credentials");
-    if (user.authenticated === false || !user.authenticated)
+    if (user.authenticated === false || !user.authenticated) {
+        // sign otp access token
+        const accessToken = (0, utils_1.generateAccessToken)({
+            user_ID: user._id,
+            user_role: user.user_type,
+        }, utils_1.otpJwtSecret, 60 * 60);
+        // Set the access token to the response cookies
+        res.cookie("otp_access_token", accessToken, {
+            path: "/v1/otp",
+            domain: process.env.API_DOMAIN,
+            httpOnly: true,
+            secure: true,
+        });
         return res.status(403).json("Unverified email address");
+    }
     // sign jwt and refresh token
     const tokenObj = yield (0, utils_1.generateTokens)({
         user_ID: user._id,
         user_role: user.user_type,
+    });
+    // Set the access and refresh tokens as cookies
+    res.cookie("access_token", tokenObj.accessToken, {
+        path: "/",
+        domain: process.env.API_DOMAIN,
+        httpOnly: true,
+        secure: true,
+    });
+    res.cookie("refresh_token", tokenObj.refreshToken, {
+        path: "/",
+        domain: process.env.API_DOMAIN,
+        httpOnly: true,
+        secure: true,
     });
     return res
         .status(200)

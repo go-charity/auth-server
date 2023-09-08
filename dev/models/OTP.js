@@ -8,6 +8,7 @@ const otpModel = new mongoose_1.default.Schema({
     email: { type: String, required: true },
     token: { type: String, required: true },
     expires_in: { type: Date, required: true },
+    expireAt: { type: Date, expires: 60 * 60 },
 });
 const OTPModel = mongoose_1.default.model("OTP", otpModel);
 exports.default = mongoose_1.default.models.OTP || OTPModel;

@@ -13,10 +13,25 @@ describe("Test cases responsible for the refresh_token endpoint", () => {
   beforeEach(async () => {
     await RefrestTokenModel.deleteMany({});
   });
+  afterAll(async () => {
+    await RefrestTokenModel.deleteMany({});
+  });
 
   test("Should return 401 status code if request is sent without a valid API key", async () => {
     const res = await request(app)
       .post("/v1/refresh_token")
+      .send({ refresh_token: "" });
+
+    expect(res.statusCode).toBe(401);
+    const data = res.body as {};
+    expect(data.toString().toLowerCase()).toContain(
+      "invalid api key".toLowerCase()
+    );
+  });
+  test("Should return 401 status code if request is sent with an invalid API key", async () => {
+    const res = await request(app)
+      .post("/v1/refresh_token")
+      .set("Api-key", convertTobase64("peepee"))
       .send({ refresh_token: "" });
 
     expect(res.statusCode).toBe(401);

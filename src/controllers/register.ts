@@ -1,5 +1,10 @@
 import { Request, Response } from "express";
-import { createNewUser, validateObjectProperties } from "../utils/utils";
+import {
+  createNewUser,
+  generateAccessToken,
+  otpJwtSecret,
+  validateObjectProperties,
+} from "../utils/utils";
 import { UserType } from "../types";
 
 export const registerUser = async (
@@ -25,8 +30,28 @@ export const registerUser = async (
   }
 
   try {
-    await createNewUser(req.body);
-    return res.status(201).json(`User created successfully`);
+    const user = await createNewUser(req.body);
+    // sign otp access token
+    const accessToken = generateAccessToken(
+      {
+        user_ID: user._id as any,
+        user_role: user.user_type,
+      },
+      otpJwtSecret,
+      60 * 60
+    );
+
+    // Set the access token to the response cookies
+    res.cookie("otp_access_token", accessToken, {
+      path: "/v1/otp",
+      domain: process.env.API_DOMAIN,
+      httpOnly: true,
+      secure: true,
+    });
+    return res.status(201).json({
+      message: "User created successfully",
+      access_token: accessToken,
+    });
   } catch (e: any) {
     console.log("ERROR MSG: ", e.message);
     // If the user already exists
