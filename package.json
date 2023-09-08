@@ -11,7 +11,7 @@
     "test": "jest",
     "dev": "nodemon ./dev/index.js",
     "watch": "tsc --project tsconfig.build.json -w",
-    "build": "tsc --project tsconfig.build.json --build",
+    "build": "tsc --build --project tsconfig.build.json",
     "start": "node ./dev/index.js"
   },
   "keywords": [
