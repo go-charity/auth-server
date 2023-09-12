@@ -9,6 +9,7 @@ import bodyParser from "body-parser";
 import otpRoutes from "./routes/otp";
 import cookieParser from "cookie-parser";
 import { apiKey } from "./utils/utils";
+import tokenRoutes from "./routes/token";
 
 config();
 connect();
@@ -37,5 +38,6 @@ app.use("/v1/login", loginRoutes);
 app.use("/v1/register", registerRoutes);
 app.use("/v1/refresh_token", refreshTokenRoutes);
 app.use("/v1/otp", otpRoutes);
+app.use("/v1/token/", tokenRoutes);
 
 export default app;

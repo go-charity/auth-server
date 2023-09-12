@@ -124,4 +124,29 @@ describe("Test cases responsible for the login endpoint", () => {
     expect(typeof data.access_token).toBe("string");
     expect(typeof data.refresh_token).toBe("string");
   });
+  test("Should return 401 status code if password is invalid", async () => {
+    const user = await UserModel.create(
+      new UserModelClass(
+        "orphanage",
+        "119u88hshsaj",
+        "onukwilip@gmail.com",
+        await bcrypt.hash("1234567", 10),
+        true
+      )
+    );
+
+    const res = await request(app)
+      .post("/v1/login")
+      .set("Api-key", convertTobase64(apiKey))
+      .send({
+        email: "onukwilip@gmail.com",
+        password: convertTobase64("123456"),
+      });
+
+    expect(res.statusCode).toBe(401);
+    const data = res.body as {};
+    expect(data.toString().toLowerCase()).toContain(
+      "Invalid credentials".toLowerCase()
+    );
+  });
 });

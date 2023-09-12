@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import {
   TokenResponseClass,
+  parseErrorMsg,
   refreshAccessToken,
   validateObjectProperties,
 } from "../utils/utils";
@@ -35,10 +36,8 @@ export const refreshToken = async (
         new TokenResponseClass(tokenObj.accessToken, tokenObj.refreshToken)
       );
   } catch (e: any) {
-    if (
-      String(e.message).includes("code") &&
-      JSON.parse(e.message)?.code === 401
-    )
+    const err = parseErrorMsg(e);
+    if (typeof err === "object" && err.code === 401)
       return res.status(401).json("Invalid refresh token");
     return res.status(500).json("Something went wrong...");
   }

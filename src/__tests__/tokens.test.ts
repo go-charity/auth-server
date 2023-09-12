@@ -145,7 +145,7 @@ describe("Test cases responsible for testing the access and refresh token genera
   });
 
   describe("Test cases responsible for testing the 'generateRefreshToken' method", () => {
-    connect();
+    beforeEach(() => connect());
 
     test("Should validate the user claim being passed to the 'data' parameter", async () => {
       try {

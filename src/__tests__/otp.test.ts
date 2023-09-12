@@ -70,7 +70,29 @@ describe("Test cases responsible for the OTP endpoint", () => {
         "unauthorized".toLowerCase()
       );
     });
-    test("Should return 401 status code if request is sent with an invalid access token", async () => {
+    test("Should return 401 status code if request is sent with an invalid access token (in the header - without the 'Bearer' prefix)", async () => {
+      const access_token = generateAccessToken(
+        { user_ID: "prince2006", user_role: "donor" },
+        otpJwtSecret,
+        -(60 * 60)
+      );
+
+      const res = await request(app)
+        .post("/v1/otp/verify")
+        .set("Api-key", convertTobase64(apiKey))
+        .set("Authorization", `${access_token}`)
+        .send({
+          email: "onukwilip@gmail.com",
+          otp: convertTobase64("123456"),
+        });
+
+      expect(res.statusCode).toBe(401);
+      const data = res.body as {};
+      expect(data.toString().toLowerCase()).toContain(
+        "unauthorized".toLowerCase()
+      );
+    });
+    test("Should return 401 status code if request is sent with an invalid access token (in the header - with the 'Bearer prefix')", async () => {
       const access_token = generateAccessToken(
         { user_ID: "prince2006", user_role: "donor" },
         otpJwtSecret,
@@ -81,6 +103,28 @@ describe("Test cases responsible for the OTP endpoint", () => {
         .post("/v1/otp/verify")
         .set("Api-key", convertTobase64(apiKey))
         .set("Authorization", `Bearer ${access_token}`)
+        .send({
+          email: "onukwilip@gmail.com",
+          otp: convertTobase64("123456"),
+        });
+
+      expect(res.statusCode).toBe(401);
+      const data = res.body as {};
+      expect(data.toString().toLowerCase()).toContain(
+        "unauthorized".toLowerCase()
+      );
+    });
+    test("Should return 401 status code if request is sent with an invalid access token (in the cookie)", async () => {
+      const access_token = generateAccessToken(
+        { user_ID: "prince2006", user_role: "donor" },
+        otpJwtSecret,
+        -(60 * 60)
+      );
+
+      const res = await request(app)
+        .post("/v1/otp/verify")
+        .set("Api-key", convertTobase64(apiKey))
+        .set("Cookie", [`otp_access_token=${access_token}`])
         .send({
           email: "onukwilip@gmail.com",
           otp: convertTobase64("123456"),
@@ -191,7 +235,7 @@ describe("Test cases responsible for the OTP endpoint", () => {
         "invalid OTP".toLowerCase()
       );
     });
-    test("Should return 200 status code if OTP is valid", async () => {
+    test("Should return 200 status code if OTP is valid and the mode is set to 'login'", async () => {
       await OTP.create(
         new OTPModelClass(
           "onukwilip@gmail.com",
@@ -215,6 +259,32 @@ describe("Test cases responsible for the OTP endpoint", () => {
       expect(data.toString().toLowerCase()).toBe(
         "User email address validated. Proceed to login".toLowerCase()
       );
+    });
+    test("Should return 200 status code if OTP is valid and the mode is set to 'change-password'", async () => {
+      await OTP.create(
+        new OTPModelClass(
+          "onukwilip@gmail.com",
+          await bcrypt.hash("24680", 10),
+          addTimeToDate(undefined, 60 * 60)
+        )
+      );
+
+      const res = await request(app)
+        .post("/v1/otp/verify")
+        .set("Api-key", convertTobase64(apiKey))
+        .set("Authorization", `Bearer ${access_token}`)
+        .set("mode", "change-password")
+        .send({
+          email: "onukwilip@gmail.com",
+          otp: convertTobase64("24680"),
+        });
+
+      expect(res.statusCode).toBe(200);
+      const data = res.body as { message: string; access_token: string };
+      expect(data.message).toMatch(
+        /user.*email.*address.*validated.*proceed.*to.*change.*password/i
+      );
+      expect(typeof data.access_token).toBe("string");
     });
   });
   describe("Test cases responsible for the /create OTP endpoint", () => {

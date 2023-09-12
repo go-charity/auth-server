@@ -3,13 +3,19 @@ import request from "supertest";
 import app from "../app";
 import {
   RefreshTokenModelClass,
+  TokenResponseClass,
   apiKey,
   convertTobase64,
+  generateRefreshToken,
 } from "../utils/utils";
 import RefrestTokenModel from "../models/RefrestTokens";
 import { v4 as uuidv4 } from "uuid";
 
 describe("Test cases responsible for the refresh_token endpoint", () => {
+  const authData = {
+    user_ID: "prince2006",
+    user_role: "orphanage",
+  };
   beforeEach(async () => {
     await RefrestTokenModel.deleteMany({});
   });
@@ -86,5 +92,21 @@ describe("Test cases responsible for the refresh_token endpoint", () => {
     expect(data.toString().toLowerCase()).toContain(
       "missing properties are: refresh_token".toLowerCase()
     );
+  });
+  test("Should return 200 status code if token is refreshed successfully", async () => {
+    const refreshTokenID = await generateRefreshToken(authData, {
+      type: "time",
+      amount: 60,
+    });
+
+    const res = await request(app)
+      .post("/v1/refresh_token")
+      .set("Api-key", convertTobase64(apiKey))
+      .send({ refresh_token: refreshTokenID });
+
+    expect(res.statusCode).toBe(200);
+    const data = res.body as TokenResponseClass;
+    expect(typeof data.access_token).toBe("string");
+    expect(typeof data.refresh_token).toBe("string");
   });
 });

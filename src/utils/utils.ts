@@ -186,39 +186,6 @@ export const validateObjectProperties = (
   return returnValue;
 };
 
-// /**
-//  *
-//  * @param body Consists of the response body to validate, the keys to validate and the response object
-//  * @returns
-//  */
-// export const validateRequestBody = ({
-//   data,
-//   keys,
-//   response,
-// }: {
-//   data: Record<any, any>;
-//   keys: string[];
-//   response: Response;
-// }) => {
-//   // Validate the body being passed to the request
-//   const result = validateObjectProperties(data, {
-//     keys: keys,
-//     strict: false,
-//     returnMissingKeys: true,
-//   });
-//   if (!result || (typeof result === "object" && !result.valid)) {
-//     return response
-//       .status(400)
-//       .json(
-//         `Invalid body passed. ${
-//           Array.isArray(result)
-//             ? `Missing properties are: ${result.join(", ")}`
-//             : ""
-//         }`
-//       );
-//   }
-// };
-
 /**
  * Throws a new error with a particular format
  * @param ErrorType The type of error to throw
@@ -236,14 +203,32 @@ const throwError = <T extends ErrorConstructor>(
 /**
  * Generates the access and refresh token for a user
  * @example generateTokens({user_ID: "prince2006", user_role: "donor"})
+ * @example generateTokens({user_ID: "prince2006", user_role: "donor"}, secretKey) // Uses a different secret key for the access token
+ * @example generateTokens({user_ID: "prince2006", user_role: "donor"}, secretKey, {access_token: 60 * 60}) // Adds 1 hour from now. I.e The access token will expire an hour
+ * @example generateTokens({user_ID: "prince2006", user_role: "donor"}, secretKey, {refresh_token: {type: "day", amount: 10}}) // Adds 10 days from now. I.e The refresh token will expire in 10 days
+ * @example generateTokens({user_ID: "prince2006", user_role: "donor"}, secretKey, {refresh_token: {type: "time", amount: 60 * 60}}) // Adds 1 hour from now. I.e The refresh token will expire an hour
  * @param data {user_ID: String, user_role: String} | user_ID: The ID of the user | user_role: The role of the user e.g orphanage/donor
+ * @param secret The secret key used to generate the token, if undefined - the default key is used
+ * @param expiresIn The timeframe for which the access or refresh token should last, if undefined - the default timeframes are used
  * @returns JWT signed access and refresh tokens
  */
 export const generateTokens = async (
-  data: TokenDataType
+  data: TokenDataType,
+  secret?: string,
+  expires_in?: {
+    access_token?: number;
+    refresh_token?: { type: "time" | "day"; amount: number };
+  }
 ): Promise<TokenObjType> => {
-  const accessToken = generateAccessToken(data);
-  const refreshToken = await generateRefreshToken(data);
+  const accessToken = generateAccessToken(
+    data,
+    secret,
+    expires_in?.access_token
+  );
+  const refreshToken = await generateRefreshToken(
+    data,
+    expires_in?.refresh_token
+  );
   return { accessToken, refreshToken };
 };
 
@@ -272,16 +257,16 @@ export const generateAccessToken = (
 
 /**
  * Validate the access token of a request
- * @example validateAccessToken(eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c)
- * @example validateAccessToken(eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c, 'secret key')
+ * @example validateAccessToken("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c")
+ * @example validateAccessToken("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c", 'secret key')
  * @param token The token to validate
  * @param secret The secret key used to generate the token, if undefined - the default key is used
- * @returns true if valid, and false if invalid
+ * @returns decrypted token if valid, and false if invalid
  */
 export const validateAccessToken = (
   token: string,
   secret?: string
-): boolean | (jwt.JwtPayload & TokenDataType) => {
+): false | (jwt.JwtPayload & TokenDataType) => {
   if (typeof token !== "string")
     throw new Error(
       `Expected the token parameter to be a 'string', but instead got a '${typeof token}'`
@@ -302,23 +287,46 @@ export const validateAccessToken = (
 /**
  * Generates the refresh token for a user, and inserts it inot the database
  * @example generateRefreshToken({user_ID: "prince2006", user_role: "donor"})
+ * @example generateRefreshToken({user_ID: "prince2006", user_role: "donor"}, {type: "day", amount: 10}); // Adds 10 days from now. I.e The token will expire in 10 days
+ * @example generateRefreshToken({user_ID: "prince2006", user_role: "donor"}, {type: "time", amount: 60 * 60}); // Adds 1 hour from now. I.e The token will expire an hour
  * @param data {user_ID: String, user_role: String} | user_ID: The ID of the user | user_role: The role of the user e.g orphanage/donor
+ * @param expiresIn The timeframe for which the refresh token should last, if undefined - the default timeframe is used
  * @returns Refresh token ID
  */
 export const generateRefreshToken = async (
-  data: TokenDataType
+  data: TokenDataType,
+  expires_in?: { type: "time" | "day"; amount: number }
 ): Promise<string> => {
   // Validate the 'data' parameter
   validateUserClaim(data, ["user_ID", "user_role"]);
 
+  // Generate a refresh token id
   const refreshTokenID = uuidv4().split("-").join("");
+  // Create a new refresh token
   const createRefreshToken = await RefrestTokenModel.create<RefreshTokenType>({
     id: refreshTokenID,
     ...data,
-    expires_in: addDaysToDate(undefined, 30),
-    valid_days: 30,
+    expires_in:
+      // If the 'expires_in' parameter was not specified: let the token expire in the next 30 days
+      !expires_in
+        ? addDaysToDate(undefined, 30)
+        : // If the 'expires_in' parameter was set and the 'type' property was set to 'time': let the token expire in the specified amount of time (in seconds) from now
+        expires_in.type === "time"
+        ? addTimeToDate(undefined, expires_in.amount)
+        : // If the 'expires_in' parameter was set and the 'type' property was set to 'date': let the token expire in the specified amount of days from now
+          addDaysToDate(undefined, expires_in.amount),
+    valid_days:
+      // If the 'expires_in' parameter was not specified: let the token expire in the next 30 days
+      !expires_in
+        ? 30
+        : // If the 'expires_in' parameter was set and the 'type' property was set to 'time': let the token expire in the specified amount of time (in seconds) from now
+        expires_in.type === "time"
+        ? (expires_in.amount / 86400).toFixed(2)
+        : // If the 'expires_in' parameter was set and the 'type' property was set to 'date': let the token expire in the specified amount of days from now
+          expires_in.amount,
   });
 
+  // If there was an error while creating the refresh token
   if (!createRefreshToken)
     throw new Error("An error occured while creating the refresh token");
 
@@ -326,13 +334,19 @@ export const generateRefreshToken = async (
 };
 
 /**
- * Generates the access token for a userRefreshes a user's access token
- * @example refreshAccessToken({user_ID: "prince2006", user_role: "donor"})
+ * Refreshes a user's access token
+ * @example refreshAccessToken("fe132312b2fb42bebb044162ef40e3ce")
  * @param refreshTokenID The refresh token which will be used to refresh the access token
+ * @param access_token.secret The secret key used to generate the token, if undefined - the default key is used
+ * @param access_token.expiresIn The timeframe for which the access token should last, if undefined - the default timeframe is used
  * @returns JWT signed access token and new refresh token
  */
 export const refreshAccessToken = async (
-  refreshTokenID: string
+  refreshTokenID: string,
+  access_token?: {
+    secret?: string;
+    expiresIn?: number;
+  }
 ): Promise<TokenObjType> => {
   // Calidate the 'refreshTokenID' parameter
   if (typeof refreshTokenID !== "string")
@@ -366,13 +380,17 @@ export const refreshAccessToken = async (
   };
 
   // Create new access and refresh tokens (based on the data of the previous refresh token)
-  const accessToken = generateAccessToken(data);
+  const accessToken = generateAccessToken(
+    data,
+    access_token?.secret,
+    access_token?.expiresIn
+  );
   const newRefreshTokenID = uuidv4().split("-").join("");
   const newRefreshToken = await RefrestTokenModel.create<RefreshTokenType>({
     id: newRefreshTokenID,
     ...data,
     expires_in: initialRefreshToken?.expires_in,
-    valid_days: 30,
+    valid_days: initialRefreshToken?.valid_days,
   });
 
   // Throw error if refresh token couldn't be created
@@ -594,4 +612,16 @@ export const sendmail = async (content: Mail.Options) => {
 
   if (response.accepted) return [true, response.response];
   else return [false, response.rejected];
+};
+
+/**
+ * Parses an error obbject
+ * @param e The error object
+ * @returns Returns the parsed error object
+ */
+export const parseErrorMsg = (
+  e: any
+): { code: number; message: string } | string => {
+  if (String(e.message).includes("code")) return JSON.parse(e.message);
+  else return e.message;
 };

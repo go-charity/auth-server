@@ -3,6 +3,7 @@ import {
   createNewUser,
   generateAccessToken,
   otpJwtSecret,
+  parseErrorMsg,
   validateObjectProperties,
 } from "../utils/utils";
 import { UserType } from "../types";
@@ -55,10 +56,8 @@ export const registerUser = async (
   } catch (e: any) {
     console.log("ERROR MSG: ", e.message);
     // If the user already exists
-    if (
-      String(e.message).includes("code") &&
-      JSON.parse(e.message)?.code === 409
-    )
+    const err = parseErrorMsg(e);
+    if (typeof err === "object" && err.code === 409)
       return res
         .status(409)
         .json(`User with email '${req.body.email}' already exists`);
