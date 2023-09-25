@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendmail = exports.getOTPEmailTemplate = exports.generateRandom6digitString = exports.validateApiKey = exports.createNewUser = exports.addTimeToDate = exports.addDaysToDate = exports.refreshAccessToken = exports.generateRefreshToken = exports.validateAccessToken = exports.generateAccessToken = exports.generateTokens = exports.validateObjectProperties = exports.validateUserClaim = exports.OTPModelClass = exports.UserModelClass = exports.RefreshTokenModelClass = exports.TokenResponseClass = exports.ErrorMsg = exports.convertFrombase64 = exports.convertTobase64 = exports.otpJwtSecret = exports.jwtSecret = exports.apiKey = void 0;
+exports.parseErrorMsg = exports.sendmail = exports.getOTPEmailTemplate = exports.generateRandom6digitString = exports.validateApiKey = exports.createNewUser = exports.addTimeToDate = exports.addDaysToDate = exports.refreshAccessToken = exports.generateRefreshToken = exports.validateAccessToken = exports.generateAccessToken = exports.generateTokens = exports.validateObjectProperties = exports.validateUserClaim = exports.OTPModelClass = exports.UserModelClass = exports.RefreshTokenModelClass = exports.TokenResponseClass = exports.ErrorMsg = exports.convertFrombase64 = exports.convertTobase64 = exports.otpJwtSecret = exports.jwtSecret = exports.apiKey = void 0;
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const uuid_1 = require("uuid");
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
@@ -168,38 +168,6 @@ const validateObjectProperties = (data, options) => {
     return returnValue;
 };
 exports.validateObjectProperties = validateObjectProperties;
-// /**
-//  *
-//  * @param body Consists of the response body to validate, the keys to validate and the response object
-//  * @returns
-//  */
-// export const validateRequestBody = ({
-//   data,
-//   keys,
-//   response,
-// }: {
-//   data: Record<any, any>;
-//   keys: string[];
-//   response: Response;
-// }) => {
-//   // Validate the body being passed to the request
-//   const result = validateObjectProperties(data, {
-//     keys: keys,
-//     strict: false,
-//     returnMissingKeys: true,
-//   });
-//   if (!result || (typeof result === "object" && !result.valid)) {
-//     return response
-//       .status(400)
-//       .json(
-//         `Invalid body passed. ${
-//           Array.isArray(result)
-//             ? `Missing properties are: ${result.join(", ")}`
-//             : ""
-//         }`
-//       );
-//   }
-// };
 /**
  * Throws a new error with a particular format
  * @param ErrorType The type of error to throw
@@ -212,12 +180,18 @@ const throwError = (ErrorType, code, message) => {
 /**
  * Generates the access and refresh token for a user
  * @example generateTokens({user_ID: "prince2006", user_role: "donor"})
+ * @example generateTokens({user_ID: "prince2006", user_role: "donor"}, secretKey) // Uses a different secret key for the access token
+ * @example generateTokens({user_ID: "prince2006", user_role: "donor"}, secretKey, {access_token: 60 * 60}) // Adds 1 hour from now. I.e The access token will expire an hour
+ * @example generateTokens({user_ID: "prince2006", user_role: "donor"}, secretKey, {refresh_token: {type: "day", amount: 10}}) // Adds 10 days from now. I.e The refresh token will expire in 10 days
+ * @example generateTokens({user_ID: "prince2006", user_role: "donor"}, secretKey, {refresh_token: {type: "time", amount: 60 * 60}}) // Adds 1 hour from now. I.e The refresh token will expire an hour
  * @param data {user_ID: String, user_role: String} | user_ID: The ID of the user | user_role: The role of the user e.g orphanage/donor
+ * @param secret The secret key used to generate the token, if undefined - the default key is used
+ * @param expiresIn The timeframe for which the access or refresh token should last, if undefined - the default timeframes are used
  * @returns JWT signed access and refresh tokens
  */
-const generateTokens = (data) => __awaiter(void 0, void 0, void 0, function* () {
-    const accessToken = (0, exports.generateAccessToken)(data);
-    const refreshToken = yield (0, exports.generateRefreshToken)(data);
+const generateTokens = (data, secret, expires_in) => __awaiter(void 0, void 0, void 0, function* () {
+    const accessToken = (0, exports.generateAccessToken)(data, secret, expires_in === null || expires_in === void 0 ? void 0 : expires_in.access_token);
+    const refreshToken = yield (0, exports.generateRefreshToken)(data, expires_in === null || expires_in === void 0 ? void 0 : expires_in.refresh_token);
     return { accessToken, refreshToken };
 });
 exports.generateTokens = generateTokens;
@@ -242,11 +216,11 @@ const generateAccessToken = (data, secret, expiresIn) => {
 exports.generateAccessToken = generateAccessToken;
 /**
  * Validate the access token of a request
- * @example validateAccessToken(eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c)
- * @example validateAccessToken(eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c, 'secret key')
+ * @example validateAccessToken("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c")
+ * @example validateAccessToken("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c", 'secret key')
  * @param token The token to validate
  * @param secret The secret key used to generate the token, if undefined - the default key is used
- * @returns true if valid, and false if invalid
+ * @returns decrypted token if valid, and false if invalid
  */
 const validateAccessToken = (token, secret) => {
     if (typeof token !== "string")
@@ -264,26 +238,50 @@ exports.validateAccessToken = validateAccessToken;
 /**
  * Generates the refresh token for a user, and inserts it inot the database
  * @example generateRefreshToken({user_ID: "prince2006", user_role: "donor"})
+ * @example generateRefreshToken({user_ID: "prince2006", user_role: "donor"}, {type: "day", amount: 10}); // Adds 10 days from now. I.e The token will expire in 10 days
+ * @example generateRefreshToken({user_ID: "prince2006", user_role: "donor"}, {type: "time", amount: 60 * 60}); // Adds 1 hour from now. I.e The token will expire an hour
  * @param data {user_ID: String, user_role: String} | user_ID: The ID of the user | user_role: The role of the user e.g orphanage/donor
+ * @param expiresIn The timeframe for which the refresh token should last, if undefined - the default timeframe is used
  * @returns Refresh token ID
  */
-const generateRefreshToken = (data) => __awaiter(void 0, void 0, void 0, function* () {
+const generateRefreshToken = (data, expires_in) => __awaiter(void 0, void 0, void 0, function* () {
     // Validate the 'data' parameter
     (0, exports.validateUserClaim)(data, ["user_ID", "user_role"]);
+    // Generate a refresh token id
     const refreshTokenID = (0, uuid_1.v4)().split("-").join("");
-    const createRefreshToken = yield RefrestTokens_1.default.create(Object.assign(Object.assign({ id: refreshTokenID }, data), { expires_in: (0, exports.addDaysToDate)(undefined, 30), valid_days: 30 }));
+    // Create a new refresh token
+    const createRefreshToken = yield RefrestTokens_1.default.create(Object.assign(Object.assign({ id: refreshTokenID }, data), { expires_in: 
+        // If the 'expires_in' parameter was not specified: let the token expire in the next 30 days
+        !expires_in
+            ? (0, exports.addDaysToDate)(undefined, 30)
+            : // If the 'expires_in' parameter was set and the 'type' property was set to 'time': let the token expire in the specified amount of time (in seconds) from now
+                expires_in.type === "time"
+                    ? (0, exports.addTimeToDate)(undefined, expires_in.amount)
+                    : // If the 'expires_in' parameter was set and the 'type' property was set to 'date': let the token expire in the specified amount of days from now
+                        (0, exports.addDaysToDate)(undefined, expires_in.amount), valid_days: 
+        // If the 'expires_in' parameter was not specified: let the token expire in the next 30 days
+        !expires_in
+            ? 30
+            : // If the 'expires_in' parameter was set and the 'type' property was set to 'time': let the token expire in the specified amount of time (in seconds) from now
+                expires_in.type === "time"
+                    ? (expires_in.amount / 86400).toFixed(2)
+                    : // If the 'expires_in' parameter was set and the 'type' property was set to 'date': let the token expire in the specified amount of days from now
+                        expires_in.amount }));
+    // If there was an error while creating the refresh token
     if (!createRefreshToken)
         throw new Error("An error occured while creating the refresh token");
     return refreshTokenID;
 });
 exports.generateRefreshToken = generateRefreshToken;
 /**
- * Generates the access token for a userRefreshes a user's access token
- * @example refreshAccessToken({user_ID: "prince2006", user_role: "donor"})
+ * Refreshes a user's access token
+ * @example refreshAccessToken("fe132312b2fb42bebb044162ef40e3ce")
  * @param refreshTokenID The refresh token which will be used to refresh the access token
+ * @param access_token.secret The secret key used to generate the token, if undefined - the default key is used
+ * @param access_token.expiresIn The timeframe for which the access token should last, if undefined - the default timeframe is used
  * @returns JWT signed access token and new refresh token
  */
-const refreshAccessToken = (refreshTokenID) => __awaiter(void 0, void 0, void 0, function* () {
+const refreshAccessToken = (refreshTokenID, access_token) => __awaiter(void 0, void 0, void 0, function* () {
     // Calidate the 'refreshTokenID' parameter
     if (typeof refreshTokenID !== "string")
         throw new TypeError(`Expected the 'refreshToken' parameter to be a string instead got type '${typeof refreshTokenID}'`);
@@ -302,9 +300,9 @@ const refreshAccessToken = (refreshTokenID) => __awaiter(void 0, void 0, void 0,
         user_role: initialRefreshToken === null || initialRefreshToken === void 0 ? void 0 : initialRefreshToken.user_role,
     };
     // Create new access and refresh tokens (based on the data of the previous refresh token)
-    const accessToken = (0, exports.generateAccessToken)(data);
+    const accessToken = (0, exports.generateAccessToken)(data, access_token === null || access_token === void 0 ? void 0 : access_token.secret, access_token === null || access_token === void 0 ? void 0 : access_token.expiresIn);
     const newRefreshTokenID = (0, uuid_1.v4)().split("-").join("");
-    const newRefreshToken = yield RefrestTokens_1.default.create(Object.assign(Object.assign({ id: newRefreshTokenID }, data), { expires_in: initialRefreshToken === null || initialRefreshToken === void 0 ? void 0 : initialRefreshToken.expires_in, valid_days: 30 }));
+    const newRefreshToken = yield RefrestTokens_1.default.create(Object.assign(Object.assign({ id: newRefreshTokenID }, data), { expires_in: initialRefreshToken === null || initialRefreshToken === void 0 ? void 0 : initialRefreshToken.expires_in, valid_days: initialRefreshToken === null || initialRefreshToken === void 0 ? void 0 : initialRefreshToken.valid_days }));
     // Throw error if refresh token couldn't be created
     if (!newRefreshToken)
         throw new Error("Could't create new refresh token");
@@ -485,3 +483,15 @@ const sendmail = (content) => __awaiter(void 0, void 0, void 0, function* () {
         return [false, response.rejected];
 });
 exports.sendmail = sendmail;
+/**
+ * Parses an error obbject
+ * @param e The error object
+ * @returns Returns the parsed error object
+ */
+const parseErrorMsg = (e) => {
+    if (String(e.message).includes("code"))
+        return JSON.parse(e.message);
+    else
+        return e.message;
+};
+exports.parseErrorMsg = parseErrorMsg;

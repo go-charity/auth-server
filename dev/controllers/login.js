@@ -48,7 +48,7 @@ const loginUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         res.cookie("otp_access_token", accessToken, {
             path: "/v1/otp",
             domain: process.env.API_DOMAIN,
-            httpOnly: true,
+            httpOnly: false,
             secure: true,
         });
         return res.status(403).json("Unverified email address");
@@ -62,13 +62,13 @@ const loginUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     res.cookie("access_token", tokenObj.accessToken, {
         path: "/",
         domain: process.env.API_DOMAIN,
-        httpOnly: true,
+        httpOnly: false,
         secure: true,
     });
     res.cookie("refresh_token", tokenObj.refreshToken, {
         path: "/",
         domain: process.env.API_DOMAIN,
-        httpOnly: true,
+        httpOnly: false,
         secure: true,
     });
     return res

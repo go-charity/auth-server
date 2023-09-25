@@ -1,4 +1,4 @@
-FROM node:gallium
+FROM node:gallium-alpine
 
 WORKDIR /app
 
@@ -8,4 +8,6 @@ RUN npm install -f
 
 COPY . .
 
-CMD ["node", "./dev/index.js"]
+RUN npm run build
+
+CMD ["npm", "start"]

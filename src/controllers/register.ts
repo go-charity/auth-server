@@ -46,7 +46,7 @@ export const registerUser = async (
     res.cookie("otp_access_token", accessToken, {
       path: "/v1/otp",
       domain: process.env.API_DOMAIN,
-      httpOnly: true,
+      httpOnly: false,
       secure: true,
     });
     return res.status(201).json({

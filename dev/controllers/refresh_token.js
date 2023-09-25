@@ -12,7 +12,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.refreshToken = void 0;
 const utils_1 = require("../utils/utils");
 const refreshToken = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
     // Validate the body being passed to the request
     const result = (0, utils_1.validateObjectProperties)(req.body, {
         keys: ["refresh_token"],
@@ -33,8 +32,8 @@ const refreshToken = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             .json(new utils_1.TokenResponseClass(tokenObj.accessToken, tokenObj.refreshToken));
     }
     catch (e) {
-        if (String(e.message).includes("code") &&
-            ((_a = JSON.parse(e.message)) === null || _a === void 0 ? void 0 : _a.code) === 401)
+        const err = (0, utils_1.parseErrorMsg)(e);
+        if (typeof err === "object" && err.code === 401)
             return res.status(401).json("Invalid refresh token");
         return res.status(500).json("Something went wrong...");
     }

@@ -12,7 +12,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.registerUser = void 0;
 const utils_1 = require("../utils/utils");
 const registerUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
     // Validate the body being passed to the request
     const result = (0, utils_1.validateObjectProperties)(req.body, {
         keys: ["user_type", "government_ID", "email", "password"],
@@ -37,7 +36,7 @@ const registerUser = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         res.cookie("otp_access_token", accessToken, {
             path: "/v1/otp",
             domain: process.env.API_DOMAIN,
-            httpOnly: true,
+            httpOnly: false,
             secure: true,
         });
         return res.status(201).json({
@@ -48,8 +47,8 @@ const registerUser = (req, res) => __awaiter(void 0, void 0, void 0, function* (
     catch (e) {
         console.log("ERROR MSG: ", e.message);
         // If the user already exists
-        if (String(e.message).includes("code") &&
-            ((_a = JSON.parse(e.message)) === null || _a === void 0 ? void 0 : _a.code) === 409)
+        const err = (0, utils_1.parseErrorMsg)(e);
+        if (typeof err === "object" && err.code === 409)
             return res
                 .status(409)
                 .json(`User with email '${req.body.email}' already exists`);

@@ -15,7 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importDefault(require("mongoose"));
 const connect = () => __awaiter(void 0, void 0, void 0, function* () {
     const con = yield mongoose_1.default.connect(process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test"
-        ? `mongodb://${process.env.MONGODB_USERNAME}:${process.env.MONGODB_PASSWORD}@localhost:27017/${process.env.MONGODB_DB}?authSource=admin`
+        ? `mongodb://${process.env.MONGODB_USERNAME}:${process.env.MONGODB_PASSWORD}@${process.env.MONGODB_LOCAL_HOST || "localhost:27017"}/${process.env.MONGODB_DB}?authSource=admin`
         : process.env.NODE_ENV === "production"
             ? `mongodb+srv://${process.env.MONGODB_USERNAME}:${process.env.MONGODB_PASSWORD}@gocharity.sja46kp.mongodb.net/${process.env.MONGODB_DB}?retryWrites=true&w=majority`
             : ``);

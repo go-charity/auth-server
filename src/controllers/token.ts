@@ -38,8 +38,12 @@ export const validateAccessToken = async (
       // If there was an error refreshing the access token
       const err = parseErrorMsg(e);
       if (typeof err === "object" && err.code === 401)
-        return res.status(401).json(`Unauthorized`);
-      return res.status(500).json(`Something went wrong`);
+        return res.status(401).json(`Unauthorized. Issue is ${err?.message}`);
+      return res
+        .status(500)
+        .json(
+          `Something went wrong while refreshing the access token: '${err}'`
+        );
     }
 
     // Validate refreshed access token
