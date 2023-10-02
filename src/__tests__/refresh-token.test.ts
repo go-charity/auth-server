@@ -7,6 +7,7 @@ import {
   apiKey,
   convertTobase64,
   generateRefreshToken,
+  generateTokens,
 } from "../utils/utils";
 import RefrestTokenModel from "../models/RefrestTokens";
 import { v4 as uuidv4 } from "uuid";
@@ -50,7 +51,7 @@ describe("Test cases responsible for the refresh_token endpoint", () => {
     const res = await request(app)
       .post("/v1/refresh_token")
       .set("Api-key", convertTobase64(apiKey))
-      .send({ refresh_token: "" });
+      .send({ refresh_token: "", access_token: "" });
 
     expect(res.statusCode).toBe(401);
     const data = res.body as {};
@@ -63,7 +64,7 @@ describe("Test cases responsible for the refresh_token endpoint", () => {
     await RefrestTokenModel.create(
       new RefreshTokenModelClass(
         refreshTokenID,
-        "onukwilip@gmail.com",
+        authData.user_ID,
         new Date(new Date().setDate(new Date().getDate() - 1)),
         30,
         "orphanage"
@@ -73,7 +74,7 @@ describe("Test cases responsible for the refresh_token endpoint", () => {
     const res = await request(app)
       .post("/v1/refresh_token")
       .set("Api-key", convertTobase64(apiKey))
-      .send({ refresh_token: refreshTokenID });
+      .send({ refresh_token: refreshTokenID, access_token: "" });
 
     expect(res.statusCode).toBe(401);
     const data = res.body as {};
@@ -89,20 +90,47 @@ describe("Test cases responsible for the refresh_token endpoint", () => {
 
     expect(res.statusCode).toBe(400);
     const data = res.body as {};
-    expect(data.toString().toLowerCase()).toContain(
-      "missing properties are: refresh_token".toLowerCase()
+    expect(data.toString()).toMatch(
+      /missing.*properties.*refresh_token.*access_token/i
     );
   });
+  test("Should return 400 status code if access token is NOT provided", async () => {
+    const res = await request(app)
+      .post("/v1/refresh_token")
+      .set("Api-key", convertTobase64(apiKey))
+      .send({ refresh_token: "" });
+
+    expect(res.statusCode).toBe(400);
+    const data = res.body as {};
+    expect(data.toString()).toMatch(/missing.*properties.*access_token/i);
+  });
+  test("Should return 400 status code if refresh token is NOT provided", async () => {
+    const res = await request(app)
+      .post("/v1/refresh_token")
+      .set("Api-key", convertTobase64(apiKey))
+      .send({ access_token: "" });
+
+    expect(res.statusCode).toBe(400);
+    const data = res.body as {};
+    expect(data.toString()).toMatch(/missing.*properties.*refresh_token/i);
+  });
   test("Should return 200 status code if token is refreshed successfully", async () => {
-    const refreshTokenID = await generateRefreshToken(authData, {
-      type: "time",
-      amount: 60,
+    // const refreshTokenID = await generateRefreshToken(authData, {
+    //   type: "time",
+    //   amount: 60,
+    // });
+    const tokens = await generateTokens(authData, "12345", {
+      access_token: 1000 * 1,
+      refresh_token: { type: "time", amount: 1000 * 1 },
     });
 
     const res = await request(app)
       .post("/v1/refresh_token")
       .set("Api-key", convertTobase64(apiKey))
-      .send({ refresh_token: refreshTokenID });
+      .send({
+        refresh_token: tokens.refreshToken,
+        access_token: tokens.accessToken,
+      });
 
     expect(res.statusCode).toBe(200);
     const data = res.body as TokenResponseClass;

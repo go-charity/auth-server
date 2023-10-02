@@ -21,7 +21,7 @@ const validateOTPAccessToken = (
   next: NextFunction
 ) => {
   if (req.cookies.otp_access_token) {
-    if (!validateAccessToken(req.cookies.otp_access_token, otpJwtSecret))
+    if (!validateAccessToken(req.cookies.otp_access_token, otpJwtSecret).status)
       return res.status(401).json("Unauthorized user");
   } else {
     if (!Object.keys(req.headers).includes("authorization"))
@@ -29,7 +29,7 @@ const validateOTPAccessToken = (
     const auth = req.headers.authorization;
     if (auth?.split(" ")[0] != "Bearer")
       return res.status(401).json("Unauthorized user");
-    if (!validateAccessToken(auth.split(" ")[1], otpJwtSecret))
+    if (!validateAccessToken(auth.split(" ")[1], otpJwtSecret).status)
       return res.status(401).json("Unauthorized user");
   }
 
