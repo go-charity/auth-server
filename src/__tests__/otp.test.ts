@@ -24,7 +24,7 @@ describe("Test cases responsible for the OTP endpoint", () => {
   });
   afterAll(async () => {
     await OTP.deleteMany({});
-    await mongoose.disconnect();
+    mongoose.disconnect();
   });
 
   describe("Test cases responsible for the /verify OTP endpoint", () => {

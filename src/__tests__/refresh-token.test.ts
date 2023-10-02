@@ -23,7 +23,7 @@ describe("Test cases responsible for the refresh_token endpoint", () => {
   });
   afterAll(async () => {
     await RefrestTokenModel.deleteMany({});
-    await mongoose.disconnect();
+    mongoose.disconnect();
   });
 
   test("Should return 401 status code if request is sent without a valid API key", async () => {

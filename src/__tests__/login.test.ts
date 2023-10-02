@@ -16,7 +16,7 @@ describe("Test cases responsible for the login endpoint", () => {
   });
   afterAll(async () => {
     await UserModel.deleteMany({});
-    await mongoose.disconnect();
+    mongoose.disconnect();
   });
 
   test("Should return 401 status code if request is sent without a valid API key", async () => {
