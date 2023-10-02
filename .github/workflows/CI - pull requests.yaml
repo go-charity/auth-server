@@ -2,13 +2,21 @@ name: Pull request CI
 on:
   pull_request:
     branches:
-      - nmain
+      - main
+env:
+  MONGODB_PASSWORD: Pa55w0rd
+  MONGODB_USERNAME: onukwilip
+  MONGODB_DB: orphanage-account
+  NODE_ENV: test
+  PORT: 5000
+  API_DOMAIN: localhost
+  MONGODB_LOCAL_HOST: localhost:27017
 jobs:
   test:
     runs-on: ubuntu-latest
     services:
       mongodb:
-        image: mongodb:jammy
+        image: mongo
         ports:
           - 27017:27017
         env:
@@ -20,14 +28,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Run tests
+        id: run-tests
         run: npm test
       - name: Upload coverage (if fail)
+        if: failure() && steps.run-tests.outcome == 'failure'
         uses: actions/upload-artifact@v3
         with:
           name: coverage
           path: coverage
 
   build:
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

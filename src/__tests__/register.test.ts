@@ -3,6 +3,7 @@ import request from "supertest";
 import app from "../app";
 import { UserModelClass, apiKey, convertTobase64 } from "../utils/utils";
 import UserModel from "../models/Users";
+import mongoose from "mongoose";
 
 describe("Test cases responsible for the register endpoint", () => {
   beforeEach(async () => {
@@ -10,6 +11,7 @@ describe("Test cases responsible for the register endpoint", () => {
   });
   afterAll(async () => {
     await UserModel.deleteMany({});
+    mongoose.disconnect();
   });
 
   test("Should return 401 status code if request is sent without a valid API key", async () => {

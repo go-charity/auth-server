@@ -12,6 +12,7 @@ import app from "../app";
 import { TokenDataType, TokenObjType } from "../types";
 import RefrestTokens from "../models/RefrestTokens";
 import connect from "../models/db.config";
+import mongoose from "mongoose";
 
 describe("Test cases responsible for the token endpoint", () => {
   const authData = {
@@ -29,6 +30,9 @@ describe("Test cases responsible for the token endpoint", () => {
       access_token: 60,
       refresh_token: { type: "time", amount: 60 },
     });
+  });
+  afterAll(async () => {
+    mongoose.disconnect();
   });
 
   test("Should return 401 status code if request is sent without a valid API key", async () => {

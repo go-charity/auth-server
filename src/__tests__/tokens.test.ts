@@ -17,6 +17,7 @@ import { RefreshTokenType, TokenDataType, TokenObjType } from "../types";
 import connect from "../models/db.config";
 import RefreshTokenModel from "../models/RefrestTokens";
 import { config } from "dotenv";
+import mongoose from "mongoose";
 
 config();
 
@@ -207,7 +208,12 @@ describe("Test cases responsible for testing the access and refresh token genera
   });
 
   describe("Test cases responsible for testing the 'refreshAccessToken' method", () => {
-    connect();
+    beforeAll(async () => {
+      await connect();
+    });
+    afterAll(async () => {
+      await mongoose.disconnect();
+    });
 
     test("Should return a valid access and refresh token object", async () => {
       const refreshToken = await generateRefreshToken(authData);

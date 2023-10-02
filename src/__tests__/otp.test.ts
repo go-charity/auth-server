@@ -11,6 +11,7 @@ import {
 } from "../utils/utils";
 import * as utils from "../utils/utils";
 import OTP from "../models/OTP";
+import mongoose from "mongoose";
 
 describe("Test cases responsible for the OTP endpoint", () => {
   const access_token = generateAccessToken(
@@ -23,6 +24,7 @@ describe("Test cases responsible for the OTP endpoint", () => {
   });
   afterAll(async () => {
     await OTP.deleteMany({});
+    mongoose.disconnect();
   });
 
   describe("Test cases responsible for the /verify OTP endpoint", () => {
