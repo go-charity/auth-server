@@ -11,6 +11,7 @@ import {
 } from "../utils/utils";
 import RefrestTokenModel from "../models/RefrestTokens";
 import { v4 as uuidv4 } from "uuid";
+import mongoose from "mongoose";
 
 describe("Test cases responsible for the refresh_token endpoint", () => {
   const authData = {
@@ -22,6 +23,7 @@ describe("Test cases responsible for the refresh_token endpoint", () => {
   });
   afterAll(async () => {
     await RefrestTokenModel.deleteMany({});
+    await mongoose.disconnect();
   });
 
   test("Should return 401 status code if request is sent without a valid API key", async () => {
