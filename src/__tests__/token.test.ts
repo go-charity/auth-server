@@ -4,6 +4,7 @@ import {
   apiKey,
   convertTobase64,
   generateAccessToken,
+  generateRefreshToken,
   generateTokens,
 } from "./../utils/utils";
 import request from "supertest";
@@ -166,5 +167,24 @@ describe("Test cases responsible for the token endpoint", () => {
     expect(data.toString().toLowerCase()).toContain(
       "Unauthorized".toLowerCase()
     );
+  });
+  test("Should return 401 status code if request is sent with a random access token (i.e. with a defferent hash), and a valid refresh token (in the cookie)", async () => {
+    const token = await generateRefreshToken(authData, {
+      type: "time",
+      amount: 60,
+    });
+
+    const res = await request(app)
+      .post("/v1/token/validate")
+      .set("Api-key", convertTobase64(apiKey))
+      .set("Cookie", [`access_token=${"kuhnhj"}`, `refresh_token=${token}`])
+      .send({
+        secret: "123456",
+      });
+
+    const data = res.body as {};
+
+    expect(res.statusCode).toBe(401);
+    expect(data.toString()).toMatch(/Unauthorized.*invalid.*access.*token/i);
   });
 });

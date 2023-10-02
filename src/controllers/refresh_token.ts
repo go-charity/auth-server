@@ -5,14 +5,16 @@ import {
   refreshAccessToken,
   validateObjectProperties,
 } from "../utils/utils";
+import { JwtPayload, decode } from "jsonwebtoken";
+import { TokenDataType } from "../types";
 
 export const refreshToken = async (
-  req: Request<any, any, { refresh_token: string }>,
+  req: Request<any, any, { refresh_token: string; access_token: string }>,
   res: Response
 ) => {
   // Validate the body being passed to the request
   const result = validateObjectProperties(req.body, {
-    keys: ["refresh_token"],
+    keys: ["refresh_token", "access_token"],
     strict: false,
     returnMissingKeys: true,
   });
@@ -29,7 +31,9 @@ export const refreshToken = async (
   }
 
   try {
-    const tokenObj = await refreshAccessToken(req.body.refresh_token);
+    const userID = (decode(req.body.access_token) as JwtPayload & TokenDataType)
+      ?.user_ID;
+    const tokenObj = await refreshAccessToken(req.body.refresh_token, userID);
     return res
       .status(200)
       .json(
@@ -39,6 +43,6 @@ export const refreshToken = async (
     const err = parseErrorMsg(e);
     if (typeof err === "object" && err.code === 401)
       return res.status(401).json("Invalid refresh token");
-    return res.status(500).json("Something went wrong...");
+    return res.status(500).json(`Something went wrong...: ${e?.message || e}`);
   }
 };

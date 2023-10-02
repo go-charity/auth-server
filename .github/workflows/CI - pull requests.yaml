@@ -1,0 +1,43 @@
+name: Pull request CI
+on:
+  pull_request:
+    branches:
+      - nmain
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      mongodb:
+        image: mongodb:jammy
+        ports:
+          - 27017:27017
+        env:
+          MONGO_INITDB_ROOT_USERNAME: onukwilip
+          MONGO_INITDB_ROOT_PASSWORD: Pa55w0rd
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Install dependencies
+        run: npm ci
+      - name: Run tests
+        run: npm test
+      - name: Upload coverage (if fail)
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage
+          path: coverage
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Install dependencies
+        run: npm ci
+      - name: Build project
+        run: npm run build
+      - name: Upload build
+        uses: actions/upload-artifact@v3
+        with:
+          name: build
+          path: dev

@@ -10,4 +10,4 @@ const refreshTokenModel = new mongoose.Schema({
 
 const RefreshTokenModel = mongoose.model("RefreshTokens", refreshTokenModel);
 
-export default mongoose.models.RefreshTokens || RefreshTokenModel;
+export default RefreshTokenModel;

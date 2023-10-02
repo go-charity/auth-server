@@ -7,7 +7,7 @@ import {
   UserType,
 } from "../types";
 import { v4 as uuidv4 } from "uuid";
-import jwt from "jsonwebtoken";
+import jwt, { VerifyErrors } from "jsonwebtoken";
 import RefrestTokenModel from "../models/RefrestTokens";
 import UserModel from "../models/Users";
 import nodemailer from "nodemailer";
@@ -266,7 +266,9 @@ export const generateAccessToken = (
 export const validateAccessToken = (
   token: string,
   secret?: string
-): false | (jwt.JwtPayload & TokenDataType) => {
+):
+  | { status: false; decoded: VerifyErrors }
+  | { status: true; decoded: jwt.JwtPayload & TokenDataType } => {
   if (typeof token !== "string")
     throw new Error(
       `Expected the token parameter to be a 'string', but instead got a '${typeof token}'`
@@ -278,9 +280,9 @@ export const validateAccessToken = (
       token,
       secret || jwtSecret
     ) as jwt.JwtPayload & TokenDataType;
-    return decryptedToken;
-  } catch (error) {
-    return false;
+    return { status: true, decoded: decryptedToken };
+  } catch (error: any) {
+    return { status: false, decoded: { ...error } };
   }
 };
 
@@ -303,7 +305,7 @@ export const generateRefreshToken = async (
   // Generate a refresh token id
   const refreshTokenID = uuidv4().split("-").join("");
   // Create a new refresh token
-  const createRefreshToken = await RefrestTokenModel.create<RefreshTokenType>({
+  const createRefreshToken = await RefrestTokenModel.create({
     id: refreshTokenID,
     ...data,
     expires_in:
@@ -343,6 +345,7 @@ export const generateRefreshToken = async (
  */
 export const refreshAccessToken = async (
   refreshTokenID: string,
+  userID: string,
   access_token?: {
     secret?: string;
     expiresIn?: number;
@@ -355,20 +358,21 @@ export const refreshAccessToken = async (
     );
 
   // Retrieve the refreshToken
-  const initialRefreshToken = await RefrestTokenModel.findOne<RefreshTokenType>(
-    { id: refreshTokenID }
-  );
+  const initialRefreshToken = await RefrestTokenModel.findOne({
+    id: refreshTokenID,
+    user_ID: userID,
+  });
 
   // Throw error if refreshToken not found
   if (!initialRefreshToken)
     return throwError<ErrorConstructor>(
       Error,
       401,
-      `Refresh token with ID '${refreshTokenID}', doesn't exist`
+      `Refresh token with ID '${refreshTokenID}', and user ID '${userID}', doesn't exist`
     );
 
   // Throw error if refreshToken is expired
-  if (new Date(initialRefreshToken.expires_in) <= new Date())
+  if (new Date(initialRefreshToken.expires_in as any) <= new Date())
     throwError<ErrorConstructor>(Error, 401, "Invalid refresh token ID");
 
   // Delete the previous refreshToken

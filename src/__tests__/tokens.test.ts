@@ -109,14 +109,14 @@ describe("Test cases responsible for testing the access and refresh token genera
       );
     });
     test("Should return 'false' if invalid token is passed", () => {
-      expect(validateAccessToken("")).toBe(false);
+      const tokenResponse = validateAccessToken("");
+      expect(tokenResponse.status).toBe(false);
     });
     test("Should return token details if a valid token is passed", () => {
       const accessToken = generateAccessToken(authData);
-      expect(
-        (validateAccessToken(accessToken) as jwt.JwtPayload & TokenDataType)
-          ?.user_ID
-      ).toBe(authData.user_ID);
+      expect((validateAccessToken(accessToken) as any).decoded?.user_ID).toBe(
+        authData.user_ID
+      );
     });
   });
 
@@ -211,7 +211,7 @@ describe("Test cases responsible for testing the access and refresh token genera
 
     test("Should return a valid access and refresh token object", async () => {
       const refreshToken = await generateRefreshToken(authData);
-      const tokenObj = await refreshAccessToken(refreshToken);
+      const tokenObj = await refreshAccessToken(refreshToken, authData.user_ID);
       expect("accessToken" in tokenObj).toBeTruthy();
       expect("refreshToken" in tokenObj).toBeTruthy();
       expect(typeof tokenObj.accessToken).toBe("string");
@@ -223,7 +223,10 @@ describe("Test cases responsible for testing the access and refresh token genera
         id: initialRefreshTokenID,
       });
 
-      const refreshedTokenObj = await refreshAccessToken(initialRefreshTokenID);
+      const refreshedTokenObj = await refreshAccessToken(
+        initialRefreshTokenID,
+        authData.user_ID
+      );
 
       const newRefreshToken = await RefreshTokenModel.findOne<RefreshTokenType>(
         {
@@ -242,7 +245,7 @@ describe("Test cases responsible for testing the access and refresh token genera
     });
     test("Should throw error if the refresh token id passed as a parameter is not a valid string", async () => {
       expect(
-        async () => await refreshAccessToken(10 as any)
+        async () => await refreshAccessToken(10 as any, "kkn")
       ).rejects.toThrowError(
         new TypeError(
           `Expected the 'refreshToken' parameter to be a string instead got type 'number'`
@@ -250,7 +253,9 @@ describe("Test cases responsible for testing the access and refresh token genera
       );
     });
     test("Should throw error if the refresh token id passed as a parameter is doesn't exist", async () => {
-      expect(async () => await refreshAccessToken("8j")).rejects.toThrowError(
+      expect(
+        async () => await refreshAccessToken("8j", "kjnnm")
+      ).rejects.toThrowError(
         new Error(
           JSON.stringify(
             new ErrorMsg(401, "Refresh token with ID '8j', doesn't exist")
