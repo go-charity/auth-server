@@ -58,11 +58,17 @@ export class UserModelClass {
     public government_ID: string,
     public email: string,
     public password: string,
-    public metadata: {
-      fullname: string;
-      phone_number: number;
-      tagline?: string;
-    }
+    public authenticated: boolean
+  ) {}
+}
+
+export class TempUserModelClass {
+  constructor(
+    // public user_ID: string,
+    public fullname: string,
+    public phone_number: string,
+    public tagline?: string,
+    public email?: string
   ) {}
 }
 
@@ -197,7 +203,7 @@ export const validateObjectProperties = (
  * @returns an object containing result of the parameter passed has the valid schema, and the error/success message
  */
 export const validateRegisterEndpointBody = (
-  userDetails: UserModelClass
+  userDetails: UserType
 ): {
   valid: boolean;
   format: Function;
@@ -580,6 +586,7 @@ export const createNewUser = async (userDetails: UserType) => {
 
     // Add the created user details to the temp user details table
     const tempUserDetails = await TempUserDetailsModel.create({
+      user_type: userDetails.user_type,
       user_ID: newUser._id.toString(),
       fullname: userDetails.metadata.fullname,
       phone_number: userDetails.metadata.phone_number,

@@ -44,6 +44,8 @@ export const registerUser = async (
         .status(409)
         .json(`User with email '${req.body.email}' already exists`);
 
-    return res.status(500).json(`Something went wrong`);
+    return res
+      .status(500)
+      .json(`Something went wrong: ${(err as any)?.message || e}`);
   }
 };
