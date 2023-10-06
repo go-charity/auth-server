@@ -22,6 +22,13 @@ import mongoose from "mongoose";
 config();
 
 describe("Test cases responsible for testing the access and refresh token generation algorithm", () => {
+  beforeAll(async () => {
+    await connect();
+  });
+  afterAll(async () => {
+    await mongoose.disconnect();
+  });
+
   const authData = {
     user_ID: "prince2006",
     user_role: "orphanage",
@@ -208,13 +215,6 @@ describe("Test cases responsible for testing the access and refresh token genera
   });
 
   describe("Test cases responsible for testing the 'refreshAccessToken' method", () => {
-    beforeAll(async () => {
-      await connect();
-    });
-    afterAll(async () => {
-      await mongoose.disconnect();
-    });
-
     test("Should return a valid access and refresh token object", async () => {
       const refreshToken = await generateRefreshToken(authData);
       const tokenObj = await refreshAccessToken(refreshToken, authData.user_ID);
@@ -222,6 +222,20 @@ describe("Test cases responsible for testing the access and refresh token genera
       expect("refreshToken" in tokenObj).toBeTruthy();
       expect(typeof tokenObj.accessToken).toBe("string");
       expect(typeof tokenObj.refreshToken).toBe("string");
+    });
+    test("Should throw error if the refresh token id passed as a parameter is doesn't exist", async () => {
+      expect(
+        async () => await refreshAccessToken("8j", "opqr")
+      ).rejects.toThrowError(
+        new Error(
+          JSON.stringify(
+            new ErrorMsg(
+              401,
+              "Refresh token with ID '8j', and user ID 'opqr', doesn't exist"
+            )
+          )
+        )
+      );
     });
     test("Should successfully refresh the access token and store the generated refresh token in the database", async () => {
       const initialRefreshTokenID = await generateRefreshToken(authData);
@@ -255,17 +269,6 @@ describe("Test cases responsible for testing the access and refresh token genera
       ).rejects.toThrowError(
         new TypeError(
           `Expected the 'refreshToken' parameter to be a string instead got type 'number'`
-        )
-      );
-    });
-    test("Should throw error if the refresh token id passed as a parameter is doesn't exist", async () => {
-      expect(
-        async () => await refreshAccessToken("8j", "kjnnm")
-      ).rejects.toThrowError(
-        new Error(
-          JSON.stringify(
-            new ErrorMsg(401, "Refresh token with ID '8j', doesn't exist")
-          )
         )
       );
     });
