@@ -7,12 +7,13 @@ import {
   UserType,
 } from "../types";
 import { v4 as uuidv4 } from "uuid";
-import jwt, { VerifyErrors } from "jsonwebtoken";
+import jwt, { Jwt, VerifyErrors } from "jsonwebtoken";
 import RefrestTokenModel from "../models/RefrestTokens";
 import UserModel from "../models/Users";
 import nodemailer from "nodemailer";
 import Mail from "nodemailer/lib/mailer";
-
+import inspector from "schema-inspector";
+import TempUserDetailsModel from "../models/TempUserDetails";
 export const apiKey = "fe132312b2fb42bebb044162ef40e3ce";
 export const jwtSecret = "88141db444b743a0bf17bbad8f7f2b48";
 export const otpJwtSecret = "79ecc06ccddf4a68ba9b85442df62975";
@@ -57,7 +58,11 @@ export class UserModelClass {
     public government_ID: string,
     public email: string,
     public password: string,
-    public authenticated: boolean
+    public metadata: {
+      fullname: string;
+      phone_number: number;
+      tagline?: string;
+    }
   ) {}
 }
 
@@ -184,6 +189,65 @@ export const validateObjectProperties = (
     );
 
   return returnValue;
+};
+
+/**
+ * A function for validating the data passed to the update location endpoint
+ * @param socialMediaHandles An object matching the following schema - {lat: number, lng: number}
+ * @returns an object containing result of the parameter passed has the valid schema, and the error/success message
+ */
+export const validateRegisterEndpointBody = (
+  userDetails: UserModelClass
+): {
+  valid: boolean;
+  format: Function;
+} => {
+  // If the value passed into the socialMediaHandles paremeter is not a valid object
+  if (typeof userDetails !== "object")
+    return {
+      valid: false,
+      format: () =>
+        `Expected the parameter passed to the 'userDetails' parameter to ba a object, but got a '${typeof userDetails}' instead`,
+    };
+  if (Array.isArray(userDetails))
+    return {
+      valid: false,
+      format: () =>
+        `Expected the parameter passed to the 'userDetails' parameter to ba a object, but got an 'array' instead`,
+    };
+
+  const schema = {
+    type: "object",
+    properties: {
+      user_type: {
+        type: "string",
+      },
+      government_ID: {
+        type: "string",
+      },
+      email: {
+        type: "string",
+      },
+      password: {
+        type: "string",
+      },
+      metadata: {
+        type: "object",
+        properties: {
+          fullname: {
+            type: "string",
+          },
+          phone_number: {
+            type: "string",
+          },
+        },
+      },
+    },
+  };
+
+  const result = inspector.validate(schema, userDetails);
+
+  return result;
 };
 
 /**
@@ -472,43 +536,84 @@ export const addTimeToDate = (
  * @param userDetails The details of the user to be created
  * @returns the created user
  */
-export const createNewUser = async (userDetails: {
-  user_type: "orphanage" | "donor";
-  government_ID: string;
-  email: string;
-  password: string;
-}) => {
-  // Validate details
-  validateObjectProperties(userDetails, {
-    keys: ["user_type", "government_ID", "email", "password"],
-    strict: true,
-    returnMissingKeys: true,
-  });
+export const createNewUser = async (userDetails: UserType) => {
+  try {
+    // Validate details
+    const result = validateRegisterEndpointBody(userDetails);
+    if (!result.valid) {
+      throw new Error(
+        `Something went wrong during user details validation: '${result.format()}'`
+      );
+    }
 
-  const existingUser = await UserModel.findOne<UserType>({
-    email: userDetails.email,
-  });
-  if (existingUser)
-    throwError(
-      Error,
-      409,
-      `User with email '${userDetails.email}' already exists`
+    // Search for any user with the same email address in the database
+    const existingUser = await UserModel.findOne<UserType>({
+      email: userDetails.email,
+    });
+    // If a user with the same user email address exists
+    if (existingUser)
+      // Throw a new error informing of the exiting user
+      throwError(
+        Error,
+        409,
+        `User with email '${userDetails.email}' already exists`
+      );
+
+    // Create the new user
+    const newUser = await UserModel.create<UserType>({
+      user_type: userDetails.user_type,
+      government_ID:
+        userDetails.user_type === "orphanage"
+          ? userDetails.government_ID
+          : "NULL",
+      email: userDetails.email,
+      password: await bcrypt.hash(convertFrombase64(userDetails.password), 10),
+      authenticated: false,
+    })
+      // If there was an error creating the new user
+      .catch((e) => {
+        throw new Error(`Could not create new user: ${e.message}`);
+      });
+
+    // If there was an error creating the new user
+    if (!newUser) throw new Error("Could not create new user");
+
+    // Add the created user details to the temp user details table
+    const tempUserDetails = await TempUserDetailsModel.create({
+      user_ID: newUser._id.toString(),
+      fullname: userDetails.metadata.fullname,
+      phone_number: userDetails.metadata.phone_number,
+      tagline: userDetails.metadata.tagline,
+      email: userDetails.email,
+    })
+      // If there was an error creating the user details
+      .catch((e) => {
+        throw new Error(`Could not create new user: ${e.message}`);
+      });
+
+    // If there was an error creating the user details
+    if (!tempUserDetails) {
+      // Delete the created user details
+      await UserModel.deleteMany({ _id: newUser._id.toString() });
+      throw new Error("Could not create new user 2");
+    }
+
+    return newUser;
+  } catch (error: any) {
+    await UserModel.deleteMany({ email: userDetails.email });
+    await TempUserDetailsModel.deleteMany({ email: userDetails.email });
+    const err = parseErrorMsg(error);
+    if (typeof err === "object" && err.code === 409) {
+      // Throw a new error informing of the exiting user
+      throwError(Error, 409, err.message);
+    }
+
+    throw new Error(
+      typeof err === "object"
+        ? err.message
+        : `Something went wrong: ${error.message || error}`
     );
-
-  const newUser = await UserModel.create<UserType>({
-    user_type: userDetails.user_type,
-    government_ID:
-      userDetails.user_type === "orphanage"
-        ? userDetails.government_ID
-        : "NULL",
-    email: userDetails.email,
-    password: await bcrypt.hash(convertFrombase64(userDetails.password), 10),
-    authenticated: false,
-  });
-
-  if (!newUser) throw new Error("Could not create new user");
-
-  return newUser;
+  }
 };
 
 /**
@@ -628,4 +733,43 @@ export const parseErrorMsg = (
 ): { code: number; message: string } | string => {
   if (String(e.message).includes("code")) return JSON.parse(e.message);
   else return e.message;
+};
+
+/**
+ * Function responsible for generating and setting the User OTP access and refresh tokens
+ * @param user The user object consisting of the following parameterd '_id', 'user_type', 'user_role', 'user_ID'
+ * @param res The express response object
+ */
+export const setOTPTokens = async (
+  user:
+    | { _id: string; user_type: string }
+    | { user_ID: string; user_role: string },
+  res: Response
+): Promise<TokenObjType> => {
+  // sign otp access and refresh token
+  const tokens = await generateTokens(
+    {
+      user_ID: (user as any)._id || (user as any).user_ID,
+      user_role: (user as any).user_type || (user as any).user_role,
+    },
+    otpJwtSecret,
+    { refresh_token: { type: "time", amount: 60 * 60 } }
+  );
+
+  // Set the access token to the response cookies
+  res.cookie("otp_access_token", tokens.accessToken, {
+    path: "/v1/otp",
+    domain: process.env.API_DOMAIN,
+    httpOnly: true,
+    secure: true,
+  });
+  // Set the refresh token to the response cookies
+  res.cookie("otp_refresh_token", tokens.accessToken, {
+    path: "/v1/otp",
+    domain: process.env.API_DOMAIN,
+    httpOnly: true,
+    secure: true,
+  });
+
+  return tokens;
 };

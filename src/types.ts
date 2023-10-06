@@ -5,6 +5,11 @@ export type UserType = {
   email: string;
   password: string;
   authenticated: boolean;
+  metadata: {
+    fullname: string;
+    phone_number: number;
+    tagline?: string;
+  };
 };
 
 export type TokenDataType = {
