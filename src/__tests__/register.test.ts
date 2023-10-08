@@ -17,7 +17,7 @@ describe("Test cases responsible for the register endpoint", () => {
   });
   afterAll(async () => {
     await UserModel.deleteMany({});
-    mongoose.disconnect();
+    await mongoose.disconnect();
   });
 
   test("Should return 401 status code if request is sent without a valid API key", async () => {

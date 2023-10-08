@@ -32,7 +32,7 @@ describe("Test cases responsible for the token endpoint", () => {
     });
   });
   afterAll(async () => {
-    mongoose.disconnect();
+    await mongoose.disconnect();
   });
 
   test("Should return 401 status code if request is sent without a valid API key", async () => {
