@@ -4,13 +4,19 @@ import {
   addTimeToDate,
   convertFrombase64,
   generateRandom6digitString,
+  generateTokens,
   getOTPEmailTemplate,
   sendmail,
+  setAccountTokens,
   validateObjectProperties,
 } from "../utils/utils";
 import OTP from "../models/OTP";
 import bcrypt from "bcrypt";
 import UserModel from "../models/Users";
+import TempUserDetailsModel from "../models/TempUserDetails";
+import jwt from "jsonwebtoken";
+import accountAPIInstance from "../utils/instances";
+import { TokenObjType } from "../types";
 
 export const verifyOTP = async (
   req: Request<any, any, { email: string; otp: string }>,
@@ -34,6 +40,8 @@ export const verifyOTP = async (
         }`
       );
 
+  // TODO: Increment the number of retries (i.e: No of times a request have been made to validate the OTP)
+
   const token = await OTP.findOne<OTPModelClass>({ email: req.body.email });
 
   // Validate if the provided email address exists in the database
@@ -49,22 +57,89 @@ export const verifyOTP = async (
   const deleteOTP = await OTP.deleteMany({ email: req.body.email });
   if (!deleteOTP) return res.status(500).json("Something went wrong");
 
-  const mode = req.headers.mode;
+  const reqToken =
+    req.cookies.otp_access_token ||
+    req.headers.authorization?.split(" ")?.[1] ||
+    "";
 
-  // If the mode is login, update the authenticated field in the database
+  const mode = (jwt.decode(reqToken) as { mode: string })?.mode;
+
+  // If the mode is login
   if (mode === "login") {
+    // Update the authenticated field in the database
     await UserModel.updateOne(
       { email: req.body.email },
       { $set: { authenticated: true } }
     );
 
-    return res
-      .status(200)
-      .json("User email address validated. Proceed to login");
+    // * Get user details and generate tokens for accessing the user account dashboard
+    // Get the user details from the user_details collection
+    const userDetails = await UserModel.findOne({
+      email: req.body.email,
+    }).catch((e) => {
+      throw new Error(e.message || e);
+    });
+
+    if (!userDetails) {
+      throw new Error(
+        `Could not find user with email address: ${req.body.email}`
+      );
+    }
+
+    // Generate the access and refresh tokens for accessing the user's account dashboard
+    const tokens = await generateTokens({
+      user_ID: userDetails._id.toString(),
+      user_role: userDetails.user_type,
+    });
+
+    // * Transfer user details from the temp_user_details collection to the account database (orphanage table)
+    // Get user details from the temp_user_details collection
+    const tempUserDetails = await TempUserDetailsModel.findOne({
+      email: req.body.email,
+    }).catch((e) => {
+      throw new Error(e.message || e);
+    });
+    if (!tempUserDetails) {
+      throw new Error(
+        `Could not retrieve user account details from the temp_user_details`
+      );
+    }
+    // Send user details to the edit orphanage account endpoint
+    const updateAccountDetailsResponse = await accountAPIInstance
+      .patch(
+        "/v1/edit/details",
+        {
+          fullname: tempUserDetails.fullname,
+          tagline: tempUserDetails.tagline,
+          phone_number: tempUserDetails.phone_number,
+        },
+        {
+          headers: {
+            ["Access-token"]: `Bearer ${tokens.accessToken}`,
+            ["Refresh-token"]: tokens.refreshToken,
+          },
+        }
+      )
+      .catch((e) => {
+        throw new Error(`Could not update user account details: ${e}`);
+      });
+
+    if (![200, 201].includes(updateAccountDetailsResponse.status)) {
+      throw new Error(`Could not update user account details`);
+    }
+
+    // Set the  access and refresh tokens as cookies
+    await setAccountTokens(res, tokens);
+
+    return res.status(200).json({
+      message: "User email validated",
+      access_token: tokens.accessToken,
+      refresh_token: tokens.refreshToken,
+    });
   }
   // If the mode is change-password, generate a special token for the change password endpoint
   else if (mode === "change-password") {
-    // Generate access_token for the change password endpoint
+    // TODO: Generate access_token for the change password endpoint
     return res.status(200).json({
       message: "User email address validated. Proceed to change password",
       access_token: "",
@@ -74,7 +149,7 @@ export const verifyOTP = async (
   return res
     .status(422)
     .json(
-      "Please validate the parameters passed, especially the 'mode' header"
+      "Please validate the parameters passed, especially the 'mode' metadata"
     );
 };
 

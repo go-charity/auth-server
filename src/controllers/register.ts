@@ -4,7 +4,9 @@ import {
   generateAccessToken,
   otpJwtSecret,
   parseErrorMsg,
+  setOTPTokens,
   validateObjectProperties,
+  validateRegisterEndpointBody,
 } from "../utils/utils";
 import { UserType } from "../types";
 
@@ -12,46 +14,27 @@ export const registerUser = async (
   req: Request<any, any, UserType>,
   res: Response
 ) => {
-  // Validate the body being passed to the request
-  const result = validateObjectProperties(req.body, {
-    keys: ["user_type", "government_ID", "email", "password"],
-    strict: false,
-    returnMissingKeys: true,
-  });
-  if (!result || (typeof result === "object" && !result.valid)) {
-    return res
-      .status(400)
-      .json(
-        `Invalid body passed. ${
-          typeof result === "object"
-            ? `Missing properties are: ${result.missingKeys.join(", ")}`
-            : ""
-        }`
-      );
-  }
-
   try {
-    const user = await createNewUser(req.body);
-    // sign otp access token
-    const accessToken = generateAccessToken(
-      {
-        user_ID: user._id as any,
-        user_role: user.user_type,
-      },
-      otpJwtSecret,
-      60 * 60
-    );
+    // Validate the body being passed to the request
+    const result = validateRegisterEndpointBody(req.body);
+    if (!result.valid) {
+      return res.status(400).json(`Invalid body passed. ${result.format()}`);
+    }
 
-    // Set the access token to the response cookies
-    res.cookie("otp_access_token", accessToken, {
-      path: "/v1/otp",
-      domain: process.env.API_DOMAIN,
-      httpOnly: false,
-      secure: true,
+    // Create a new user
+    const user = await createNewUser(req.body);
+
+    // sign otp access token
+    const tokens = await setOTPTokens(res, undefined, {
+      user_ID: user._id.toString(),
+      user_role: user.user_type,
+      mode: "login",
     });
+
     return res.status(201).json({
       message: "User created successfully",
-      access_token: accessToken,
+      access_token: tokens.accessToken,
+      refresh_token: tokens.refreshToken,
     });
   } catch (e: any) {
     console.log("ERROR MSG: ", e.message);
@@ -62,6 +45,8 @@ export const registerUser = async (
         .status(409)
         .json(`User with email '${req.body.email}' already exists`);
 
-    return res.status(500).json(`Something went wrong`);
+    return res
+      .status(500)
+      .json(`Something went wrong: ${(err as any)?.message || e}`);
   }
 };
