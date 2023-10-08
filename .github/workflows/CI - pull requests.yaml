@@ -31,7 +31,7 @@ jobs:
         id: run-tests
         run: npm test
       - name: Upload coverage (if fail)
-        if: failure() && steps.run-tests.outcome == 'failure'
+        if: (failure() && steps.run-tests.outcome == 'failure') || (cancelled() && steps.run-tests.outcome == 'cancelled')
         uses: actions/upload-artifact@v3
         with:
           name: coverage

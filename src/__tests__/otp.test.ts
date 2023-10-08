@@ -32,7 +32,7 @@ jest.mock("../utils/instances", () => {
       },
     }),
   };
-});
+}); //
 
 describe("Test cases responsible for the OTP endpoint", () => {
   let tokens: TokenObjType | undefined = undefined;
@@ -54,7 +54,7 @@ describe("Test cases responsible for the OTP endpoint", () => {
   });
   afterAll(async () => {
     await OTP.deleteMany({});
-    mongoose.disconnect();
+    await mongoose.disconnect();
   });
 
   describe("Test cases responsible for the /verify OTP endpoint", () => {
