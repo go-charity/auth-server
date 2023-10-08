@@ -15,7 +15,11 @@ import * as utils from "../utils/utils";
 import OTP from "../models/OTP";
 import mongoose from "mongoose";
 import accountAPIInstance from "../utils/instances";
-import { LoginEmailErrorResponseType, TokenObjType } from "../types";
+import {
+  LoginEmailErrorResponseType,
+  LoginResponseType,
+  TokenObjType,
+} from "../types";
 import UserModel from "../models/Users";
 import TempUserDetailsModel from "../models/TempUserDetails";
 
@@ -192,6 +196,64 @@ describe("Test cases responsible for the OTP endpoint", () => {
       const data = res.body as any;
       expect(data).toMatch(/unauthorized/i);
     });
+    test("Should return 200 status code and refresh the access token (in the cookie)", async () => {
+      const tokens = await generateTokens(
+        { user_ID: "prince2006", user_role: "donor", mode: "login" },
+        otpJwtSecret,
+        {
+          access_token: -(60 * 60),
+          refresh_token: {
+            type: "time",
+            amount: 60 * 60,
+          },
+        }
+      );
+
+      await OTP.create(
+        new OTPModelClass(
+          "onukwilip@gmail.com",
+          await bcrypt.hash("24680", 10),
+          addTimeToDate(undefined, 60 * 60)
+        )
+      );
+      const newUser = await UserModel.create(
+        new UserModelClass(
+          "orphanage",
+          "889888iii8",
+          "onukwilip@gmail.com",
+          "123456",
+          false
+        )
+      );
+      await TempUserDetailsModel.create(
+        new TempUserModelClass(
+          newUser._id.toString(),
+          newUser.user_type,
+          "Hope at last",
+          "090909090",
+          "Giving hope to children",
+          "onukwilip@gmail.com"
+        )
+      );
+
+      const res = await request(app)
+        .post("/v1/otp/verify")
+        .set("Api-key", convertTobase64(apiKey))
+        .set("Cookie", [
+          `otp_access_token=${tokens.accessToken}`,
+          `otp_refresh_token=${tokens.refreshToken}`,
+        ])
+        .send({
+          email: "onukwilip@gmail.com",
+          otp: convertTobase64("24680"),
+        });
+
+      expect(res.statusCode).toBe(200);
+      const data = res.body as LoginResponseType;
+      expect(data.message).toMatch(/email.*validated/i);
+      expect(typeof data.access_token).toBe("string");
+      expect(typeof data.refresh_token).toBe("string");
+    });
     test("Should return 422 status code if request is sent without a valid mode header", async () => {
       const tokens = await generateTokens(
         { user_ID: "prince2006", user_role: "donor" },
@@ -347,8 +409,10 @@ describe("Test cases responsible for the OTP endpoint", () => {
         });
 
       expect(res.statusCode).toBe(200);
-      const data = res.body as LoginEmailErrorResponseType;
+      const data = res.body as LoginResponseType;
       expect(data.message).toMatch(/email.*validated/i);
+      expect(typeof data.access_token).toBe("string");
+      expect(typeof data.refresh_token).toBe("string");
     });
     test("Should return 200 status code if OTP is valid and the mode is set to 'change-password'", async () => {
       const tokens = await generateTokens(
@@ -457,6 +521,32 @@ describe("Test cases responsible for the OTP endpoint", () => {
       expect(res.statusCode).toBe(401);
       const data = res.body as string;
       expect(data).toMatch(/unauthorized/i);
+    });
+    test("Should return 200 status code and refresh the access token (in the cookie)", async () => {
+      const tokens = await generateTokens(
+        { user_ID: "prince2006", user_role: "donor", mode: "login" },
+        otpJwtSecret,
+        {
+          access_token: -(60 * 60),
+          refresh_token: {
+            type: "time",
+            amount: 60 * 60,
+          },
+        }
+      );
+
+      const res = await request(app)
+        .post("/v1/otp/create")
+        .set("Api-key", convertTobase64(apiKey))
+        .set("Authorization", `Bearer ${tokens.accessToken}`)
+        .set("Otp-refresh-token", tokens.refreshToken)
+        .send({
+          email: "onukwilip@gmail.com",
+        });
+
+      expect(res.statusCode).toBe(201);
+      const data = res.body as string;
+      expect(data).toMatch(/otp.*created.*successfully/i);
     });
     test("Should return 422 status code if request is sent without a valid mode in the OTP request token", async () => {
       const tokens = await generateTokens(

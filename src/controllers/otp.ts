@@ -158,51 +158,55 @@ export const createOTP = async (
   res: Response,
   next: NextFunction
 ) => {
-  // Validate the body being passed to the request
-  const result = validateObjectProperties(req.body, {
-    keys: ["email"],
-    strict: false,
-    returnMissingKeys: true,
-  });
-  if (!result || (typeof result === "object" && !result.valid))
-    return res
-      .status(422)
-      .json(
-        `Invalid body passed. ${
-          typeof result === "object"
-            ? `Missing properties are: ${result.missingKeys.join(", ")}`
-            : ""
-        }`
-      );
+  try {
+    // Validate the body being passed to the request
+    const result = validateObjectProperties(req.body, {
+      keys: ["email"],
+      strict: false,
+      returnMissingKeys: true,
+    });
+    if (!result || (typeof result === "object" && !result.valid))
+      return res
+        .status(422)
+        .json(
+          `Invalid body passed. ${
+            typeof result === "object"
+              ? `Missing properties are: ${result.missingKeys.join(", ")}`
+              : ""
+          }`
+        );
 
-  // Delete previous OTP with same email address
-  const deletedOTP = await OTP.deleteMany({
-    email: req.body.email,
-  });
+    // Delete previous OTP with same email address
+    const deletedOTP = await OTP.deleteMany({
+      email: req.body.email,
+    });
 
-  if (!deletedOTP.acknowledged)
-    return res.status(500).json("Something wrong occurred");
+    if (!deletedOTP.acknowledged)
+      return res.status(500).json("Something wrong occurred");
 
-  const token = generateRandom6digitString();
+    const token = generateRandom6digitString();
 
-  // Create a valid OTP token
-  const otp = await OTP.create(
-    new OTPModelClass(
-      req.body.email,
-      await bcrypt.hash(token, 10),
-      addTimeToDate(undefined, 60 * 60)
-    )
-  );
+    // Create a valid OTP token
+    const otp = await OTP.create(
+      new OTPModelClass(
+        req.body.email,
+        await bcrypt.hash(token, 10),
+        addTimeToDate(undefined, 60 * 60)
+      )
+    );
 
-  // Send the token to the right email address
-  await sendmail({
-    from: process.env.MAIL_ACCOUNT_EMAIL,
-    to: req.body.email,
-    subject: "Confirm your email address",
-    html: getOTPEmailTemplate(token),
-  });
+    // Send the token to the right email address
+    await sendmail({
+      from: process.env.MAIL_ACCOUNT_EMAIL,
+      to: req.body.email,
+      subject: "Confirm your email address",
+      html: getOTPEmailTemplate(token),
+    });
 
-  if (!otp) return res.status(500).json("Something wrong occurred");
+    if (!otp) return res.status(500).json("Something wrong occurred");
 
-  return res.status(201).json("OTP created successfully");
+    return res.status(201).json("OTP created successfully");
+  } catch (error: any) {
+    return res.status(500).json(error.message || error);
+  }
 };

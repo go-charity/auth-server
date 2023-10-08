@@ -26,71 +26,74 @@ const validateOTPTokens = async (
   res: Response,
   next: NextFunction
 ) => {
+  let otp_access_token = undefined;
+
   if (req.cookies.otp_access_token) {
-    if (!validateAccessToken(req.cookies.otp_access_token, otpJwtSecret).status)
-      return res.status(401).json("Unauthorized user");
+    otp_access_token = req.cookies.otp_access_token;
   } else {
     if (!Object.keys(req.headers).includes("authorization"))
       return res.status(401).json("Unauthorized user");
     const auth = req.headers.authorization;
-    if (auth?.split(" ")[0] != "Bearer")
+    if (auth?.split(" ")[0] !== "Bearer")
       return res.status(401).json("Unauthorized user");
 
-    const otp_access_token = auth.split(" ")[1];
-    const validatedToken = validateAccessToken(otp_access_token, otpJwtSecret);
+    otp_access_token = auth.split(" ")[1];
+  }
 
-    if (!validatedToken.status) {
-      if (validatedToken.decoded.name === "TokenExpiredError") {
-        let response: TokenObjType;
-        try {
-          // Refresh the access token if expired
-          // Get the refresh token from the request
-          const refresh_token =
-            req.cookies["otp_refresh_token"] ||
-            req.headers["otp-refresh-token"];
+  const validatedToken = validateAccessToken(
+    otp_access_token || "",
+    otpJwtSecret
+  );
 
-          // TODO: Check the number of times the user with the session sent has tried to verify his/her OTP
-          // TODO: If it's greater than 5 trials, return 409 Max tries reached
+  if (!validatedToken.status) {
+    if (validatedToken.decoded.name === "TokenExpiredError") {
+      let response: TokenObjType;
+      try {
+        // * Refresh the access token if expired
+        // Get the refresh token from the request
+        const refresh_token =
+          req.cookies["otp_refresh_token"] || req.headers["otp-refresh-token"];
 
-          // Decode the token and get the ID of the user
-          const userID = (
-            decode(otp_access_token) as JwtPayload & TokenDataType
-          ).user_ID;
-          response = await refreshAccessToken(refresh_token, userID, {
-            secret: otpJwtSecret,
-          });
-        } catch (e: any) {
-          // If there was an error refreshing the access token
-          const err = parseErrorMsg(e);
-          if (typeof err === "object" && err.code === 401)
-            return res
-              .status(401)
-              .json(`Unauthorized. Issue is ${err?.message}`);
-          return res
-            .status(500)
-            .json(
-              `Something went wrong while refreshing the access token: '${err}'`
-            );
-        }
+        // TODO: Check the number of times the user with the session sent has tried to verify his/her OTP
+        // TODO: If it's greater than 5 trials, return 409 Max tries reached
 
-        // Validate refreshed access token
-        const newTokenDetails = validateAccessToken(
-          response.accessToken,
-          otpJwtSecret
-        );
-
-        // If token is not authenticated
-        if (!newTokenDetails.status)
-          return res.status(401).json(`Unauthorized`);
-
-        // If token was refreshed, set new access and refresh tokens in the response headers and cookies
-        await setOTPTokens(res, response);
-        res.setHeader("Otp-access-token", response.accessToken);
-        res.setHeader("Otp-refresh-token", response.refreshToken);
+        // Decode the token and get the ID of the user
+        const userID = (decode(otp_access_token) as JwtPayload & TokenDataType)
+          .user_ID;
+        response = await refreshAccessToken(refresh_token, userID, {
+          secret: otpJwtSecret,
+        });
+      } catch (e: any) {
+        // If there was an error refreshing the access token
+        const err = parseErrorMsg(e);
+        if (typeof err === "object" && err.code === 401)
+          return res.status(401).json(`Unauthorized. Issue is ${err?.message}`);
+        return res
+          .status(500)
+          .json(
+            `Something went wrong while refreshing the access token: '${err}'`
+          );
       }
-      if (validatedToken.decoded.name !== "TokenExpiredError")
-        return res.status(401).json("Unauthorized user");
-    }
+
+      // Validate refreshed access token
+      const newTokenDetails = validateAccessToken(
+        response.accessToken,
+        otpJwtSecret
+      );
+
+      // If token is not authenticated
+      if (!newTokenDetails.status) return res.status(401).json(`Unauthorized`);
+
+      // If token was refreshed, set new access and refresh tokens in the response headers and cookies
+      await setOTPTokens(res, response);
+      res.setHeader("Otp-access-token", response.accessToken);
+      res.setHeader("Otp-refresh-token", response.refreshToken);
+
+      return next();
+    } else if (validatedToken.decoded.name !== "TokenExpiredError")
+      return res
+        .status(401)
+        .json(`Unauthorized user: Issue is ${validatedToken.decoded.name}`);
   }
 
   next();
