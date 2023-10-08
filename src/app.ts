@@ -8,7 +8,6 @@ import refreshTokenRoutes from "./routes/refresh_token";
 import bodyParser from "body-parser";
 import otpRoutes from "./routes/otp";
 import cookieParser from "cookie-parser";
-import { apiKey } from "./utils/utils";
 import tokenRoutes from "./routes/token";
 
 config();

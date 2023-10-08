@@ -116,13 +116,15 @@ export const verifyOTP = async (
           },
           {
             headers: {
-              ["Access-token"]: `Bearer ${tokens.accessToken}`,
+              Authorization: `Bearer ${tokens.accessToken}`,
               ["Refresh-token"]: tokens.refreshToken,
             },
           }
         )
-        .catch((e) => {
-          throw new Error(`Could not update user account details: ${e}`);
+        .catch((e: any) => {
+          throw new Error(
+            `Could not update user account details (here): ${e?.message || e}`
+          );
         });
 
       if (![200, 201].includes(updateAccountDetailsResponse.status)) {
@@ -153,6 +155,11 @@ export const verifyOTP = async (
         "Please validate the parameters passed, especially the 'mode' metadata"
       );
   } catch (error: any) {
+    // Reset the authenticated field in the database
+    await UserModel.updateOne(
+      { email: req.body.email },
+      { $set: { authenticated: false } }
+    );
     return res.status(500).json(error.message || error);
   }
 };

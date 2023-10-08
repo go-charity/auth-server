@@ -1,8 +1,11 @@
 import axios from "axios";
 import { convertTobase64 } from "./utils";
+import { config } from "dotenv";
+
+config();
 
 const accountAPIInstance = axios.create({
-  baseURL: process.env.ORPHANAGE_API_DOMAIN,
+  baseURL: process.env.ORPHANAGE_API_DOMAIN || "dummy.cll",
 });
 
 accountAPIInstance.interceptors.request.use(
