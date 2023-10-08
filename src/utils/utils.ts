@@ -64,7 +64,8 @@ export class UserModelClass {
 
 export class TempUserModelClass {
   constructor(
-    // public user_ID: string,
+    public user_ID: string,
+    public user_type: string,
     public fullname: string,
     public phone_number: string,
     public tagline?: string,

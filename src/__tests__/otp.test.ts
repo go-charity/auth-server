@@ -6,7 +6,7 @@ import {
   addTimeToDate,
   apiKey,
   convertTobase64,
-  generateAccessToken,
+  TempUserModelClass,
   otpJwtSecret,
   UserModelClass,
   generateTokens,
@@ -17,6 +17,7 @@ import mongoose from "mongoose";
 import accountAPIInstance from "../utils/instances";
 import { LoginEmailErrorResponseType, TokenObjType } from "../types";
 import UserModel from "../models/Users";
+import TempUserDetailsModel from "../models/TempUserDetails";
 
 jest.mock("../utils/instances", () => {
   const originalAxiosProps = jest.requireActual("../utils/instances");
@@ -37,6 +38,11 @@ jest.mock("../utils/instances", () => {
 describe("Test cases responsible for the OTP endpoint", () => {
   let tokens: TokenObjType | undefined = undefined;
 
+  const deleteAll = async () => {
+    await OTP.deleteMany({});
+    await UserModel.deleteMany({});
+    await TempUserDetailsModel.deleteMany({});
+  };
   beforeAll(async () => {
     tokens = await generateTokens(
       { user_ID: "prince2006", user_role: "donor", mode: "login" },
@@ -50,10 +56,10 @@ describe("Test cases responsible for the OTP endpoint", () => {
     );
   });
   beforeEach(async () => {
-    await OTP.deleteMany({});
+    await deleteAll();
   });
   afterAll(async () => {
-    await OTP.deleteMany({});
+    await deleteAll();
     await mongoose.disconnect();
   });
 
@@ -310,13 +316,23 @@ describe("Test cases responsible for the OTP endpoint", () => {
           addTimeToDate(undefined, 60 * 60)
         )
       );
-      await UserModel.create(
+      const newUser = await UserModel.create(
         new UserModelClass(
           "orphanage",
           "889888iii8",
           "onukwilip@gmail.com",
           "123456",
           false
+        )
+      );
+      await TempUserDetailsModel.create(
+        new TempUserModelClass(
+          newUser._id.toString(),
+          newUser.user_type,
+          "Hope at last",
+          "090909090",
+          "Giving hope to children",
+          "onukwilip@gmail.com"
         )
       );
 
