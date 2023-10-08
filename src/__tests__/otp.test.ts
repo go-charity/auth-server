@@ -18,22 +18,11 @@ import accountAPIInstance from "../utils/instances";
 import { LoginEmailErrorResponseType, TokenObjType } from "../types";
 import UserModel from "../models/Users";
 
-/*
-  jest.fn().mockResolvedValue({
-          message: "User updated successfully",
-        })
- */
-
 jest.mock("../utils/instances", () => {
   const originalAxiosProps = jest.requireActual("../utils/instances");
 
   return {
     ...(typeof originalAxiosProps === "object" ? originalAxiosProps : {}),
-    // interceptors: {
-    //   request: {
-    //     use: jest.fn(),
-    //   },
-    // },
     patch: jest.fn().mockResolvedValue({
       status: 201,
       response: {
@@ -44,8 +33,6 @@ jest.mock("../utils/instances", () => {
     }),
   };
 });
-
-// jest.mock("axios");
 
 describe("Test cases responsible for the OTP endpoint", () => {
   let tokens: TokenObjType | undefined = undefined;
@@ -71,10 +58,6 @@ describe("Test cases responsible for the OTP endpoint", () => {
   });
 
   describe("Test cases responsible for the /verify OTP endpoint", () => {
-    // (accountAPIInstance as any).patch.mockResolvedValue({
-    //   message: "User updated successfully",
-    // });
-
     test("Should return 401 status code if request is sent without a valid API key", async () => {
       const res = await request(app)
         .post("/v1/otp/verify")
