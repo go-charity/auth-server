@@ -142,6 +142,8 @@ describe("Test cases responsible for the register endpoint", () => {
         ),
         metadata: {
           ...new TempUserModelClass(
+            "",
+            "",
             "Prince C. Onukwili",
             "0909092090",
             "This is a demo",
