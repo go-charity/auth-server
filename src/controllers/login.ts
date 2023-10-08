@@ -8,6 +8,8 @@ import {
   generateAccessToken,
   generateTokens,
   otpJwtSecret,
+  setAccountTokens,
+  setOTPTokens,
   validateObjectProperties,
 } from "../utils/utils";
 
@@ -42,23 +44,16 @@ export const loginUser = async (req: Request, res: Response) => {
   if (!passwordisValid) return res.status(401).json("Invalid credentials");
   if (user.authenticated === false || !user.authenticated) {
     // sign otp access token
-    const accessToken = generateAccessToken(
-      {
-        user_ID: user._id as any,
-        user_role: user.user_type,
-      },
-      otpJwtSecret,
-      60 * 60
-    );
-
-    // Set the access token to the response cookies
-    res.cookie("otp_access_token", accessToken, {
-      path: "/v1/otp",
-      domain: process.env.API_DOMAIN,
-      httpOnly: false,
-      secure: true,
+    const tokens = await setOTPTokens(res, undefined, {
+      user_ID: user._id as any,
+      user_role: user.user_type,
+      mode: "login",
     });
-    return res.status(403).json("Unverified email address");
+    return res.status(403).json({
+      message: "Unverified email address",
+      otp_access_token: tokens.accessToken,
+      otp_refresh_token: tokens.refreshToken,
+    });
   }
 
   // sign jwt and refresh token
@@ -68,18 +63,7 @@ export const loginUser = async (req: Request, res: Response) => {
   });
 
   // Set the access and refresh tokens as cookies
-  res.cookie("access_token", tokenObj.accessToken, {
-    path: "/",
-    domain: process.env.API_DOMAIN,
-    httpOnly: false,
-    secure: true,
-  });
-  res.cookie("refresh_token", tokenObj.refreshToken, {
-    path: "/",
-    domain: process.env.API_DOMAIN,
-    httpOnly: false,
-    secure: true,
-  });
+  await setAccountTokens(res, tokenObj);
 
   return res
     .status(200)

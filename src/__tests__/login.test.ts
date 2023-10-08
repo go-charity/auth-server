@@ -9,6 +9,7 @@ import request from "supertest";
 import app from "../app";
 import UserModel from "../models/Users";
 import mongoose from "mongoose";
+import { LoginEmailErrorResponseType, LoginResponseType } from "../types";
 
 describe("Test cases responsible for the login endpoint", () => {
   beforeEach(async () => {
@@ -97,10 +98,10 @@ describe("Test cases responsible for the login endpoint", () => {
       });
 
     expect(res.statusCode).toBe(403);
-    const data = res.body as {};
-    expect(data.toString().toLowerCase()).toContain(
-      "Unverified email address".toLowerCase()
-    );
+    const data = res.body as LoginEmailErrorResponseType;
+    expect(data.message).toMatch(/unverified.*email.*address/i);
+    expect(typeof data.otp_access_token).toBe("string");
+    expect(typeof data.otp_refresh_token).toBe("string");
   });
   test("Should return 200 status code with the access and refresh tokens!", async () => {
     const user = await UserModel.create(
@@ -122,7 +123,7 @@ describe("Test cases responsible for the login endpoint", () => {
       });
 
     expect(res.statusCode).toBe(200);
-    const data = res.body as TokenResponseClass;
+    const data = res.body as LoginResponseType;
     expect(typeof data.access_token).toBe("string");
     expect(typeof data.refresh_token).toBe("string");
   });

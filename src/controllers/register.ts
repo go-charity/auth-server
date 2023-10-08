@@ -25,10 +25,11 @@ export const registerUser = async (
     const user = await createNewUser(req.body);
 
     // sign otp access token
-    const tokens = await setOTPTokens(
-      { _id: user._id.toString(), user_type: user.user_type },
-      res
-    );
+    const tokens = await setOTPTokens(res, undefined, {
+      user_ID: user._id.toString(),
+      user_role: user.user_type,
+      mode: "login",
+    });
 
     return res.status(201).json({
       message: "User created successfully",

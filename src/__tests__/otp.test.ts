@@ -8,17 +8,60 @@ import {
   convertTobase64,
   generateAccessToken,
   otpJwtSecret,
+  UserModelClass,
+  generateTokens,
 } from "../utils/utils";
 import * as utils from "../utils/utils";
 import OTP from "../models/OTP";
 import mongoose from "mongoose";
+import accountAPIInstance from "../utils/instances";
+import { LoginEmailErrorResponseType, TokenObjType } from "../types";
+import UserModel from "../models/Users";
+
+/*
+  jest.fn().mockResolvedValue({
+          message: "User updated successfully",
+        })
+ */
+
+jest.mock("../utils/instances", () => {
+  const originalAxiosProps = jest.requireActual("../utils/instances");
+
+  return {
+    ...(typeof originalAxiosProps === "object" ? originalAxiosProps : {}),
+    // interceptors: {
+    //   request: {
+    //     use: jest.fn(),
+    //   },
+    // },
+    patch: jest.fn().mockResolvedValue({
+      status: 201,
+      response: {
+        data: {
+          message: "User updated successfully",
+        },
+      },
+    }),
+  };
+});
+
+// jest.mock("axios");
 
 describe("Test cases responsible for the OTP endpoint", () => {
-  const access_token = generateAccessToken(
-    { user_ID: "prince2006", user_role: "donor" },
-    otpJwtSecret,
-    60 * 60
-  );
+  let tokens: TokenObjType | undefined = undefined;
+
+  beforeAll(async () => {
+    tokens = await generateTokens(
+      { user_ID: "prince2006", user_role: "donor", mode: "login" },
+      otpJwtSecret,
+      {
+        refresh_token: {
+          type: "time",
+          amount: 60 * 60,
+        },
+      }
+    );
+  });
   beforeEach(async () => {
     await OTP.deleteMany({});
   });
@@ -28,6 +71,10 @@ describe("Test cases responsible for the OTP endpoint", () => {
   });
 
   describe("Test cases responsible for the /verify OTP endpoint", () => {
+    // (accountAPIInstance as any).patch.mockResolvedValue({
+    //   message: "User updated successfully",
+    // });
+
     test("Should return 401 status code if request is sent without a valid API key", async () => {
       const res = await request(app)
         .post("/v1/otp/verify")
@@ -72,17 +119,23 @@ describe("Test cases responsible for the OTP endpoint", () => {
         "unauthorized".toLowerCase()
       );
     });
-    test("Should return 401 status code if request is sent with an invalid access token (in the header - without the 'Bearer' prefix)", async () => {
-      const access_token = generateAccessToken(
+    test("Should return 401 status code if request is sent with invalid access and refresh tokens (in the header - without the 'Bearer' prefix)", async () => {
+      const tokens = await generateTokens(
         { user_ID: "prince2006", user_role: "donor" },
         otpJwtSecret,
-        -(60 * 60)
+        {
+          access_token: -(60 * 60),
+          refresh_token: {
+            type: "time",
+            amount: -(60 * 60),
+          },
+        }
       );
 
       const res = await request(app)
         .post("/v1/otp/verify")
         .set("Api-key", convertTobase64(apiKey))
-        .set("Authorization", `${access_token}`)
+        .set("Authorization", `${tokens.accessToken}`)
         .send({
           email: "onukwilip@gmail.com",
           otp: convertTobase64("123456"),
@@ -94,98 +147,127 @@ describe("Test cases responsible for the OTP endpoint", () => {
         "unauthorized".toLowerCase()
       );
     });
-    test("Should return 401 status code if request is sent with an invalid access token (in the header - with the 'Bearer prefix')", async () => {
-      const access_token = generateAccessToken(
+    test("Should return 401 status code if request is sent with invalid access and refresh tokens (in the header - with the 'Bearer prefix')", async () => {
+      const tokens = await generateTokens(
         { user_ID: "prince2006", user_role: "donor" },
         otpJwtSecret,
-        -(60 * 60)
+        {
+          access_token: -(60 * 60),
+          refresh_token: {
+            type: "time",
+            amount: -(60 * 60),
+          },
+        }
       );
 
       const res = await request(app)
         .post("/v1/otp/verify")
         .set("Api-key", convertTobase64(apiKey))
-        .set("Authorization", `Bearer ${access_token}`)
+        .set("Authorization", `Bearer ${tokens.accessToken}`)
+        .set("Otp-refresh-token", tokens.refreshToken)
         .send({
           email: "onukwilip@gmail.com",
           otp: convertTobase64("123456"),
         });
 
       expect(res.statusCode).toBe(401);
-      const data = res.body as {};
-      expect(data.toString().toLowerCase()).toContain(
-        "unauthorized".toLowerCase()
-      );
+      const data = res.body as any;
+      expect(data).toMatch(/unauthorized/i);
     });
     test("Should return 401 status code if request is sent with an invalid access token (in the cookie)", async () => {
-      const access_token = generateAccessToken(
+      const tokens = await generateTokens(
         { user_ID: "prince2006", user_role: "donor" },
         otpJwtSecret,
-        -(60 * 60)
+        {
+          access_token: -(60 * 60),
+          refresh_token: {
+            type: "time",
+            amount: -(60 * 60),
+          },
+        }
       );
 
       const res = await request(app)
         .post("/v1/otp/verify")
         .set("Api-key", convertTobase64(apiKey))
-        .set("Cookie", [`otp_access_token=${access_token}`])
+        .set("Cookie", [
+          `otp_access_token=${tokens.accessToken}`,
+          `otp_refresh_token=${tokens.refreshToken}`,
+        ])
         .send({
           email: "onukwilip@gmail.com",
           otp: convertTobase64("123456"),
         });
 
       expect(res.statusCode).toBe(401);
-      const data = res.body as {};
-      expect(data.toString().toLowerCase()).toContain(
-        "unauthorized".toLowerCase()
-      );
+      const data = res.body as any;
+      expect(data).toMatch(/unauthorized/i);
     });
     test("Should return 422 status code if request is sent without a valid mode header", async () => {
+      const tokens = await generateTokens(
+        { user_ID: "prince2006", user_role: "donor" },
+        otpJwtSecret,
+        {
+          refresh_token: {
+            type: "time",
+            amount: 60 * 60,
+          },
+        }
+      );
+
       const res = await request(app)
         .post("/v1/otp/verify")
         .set("Api-key", convertTobase64(apiKey))
-        .set("Authorization", `Bearer ${access_token}`)
+        .set("Authorization", `Bearer ${tokens.accessToken}`)
+        .set("Otp-refresh-token", tokens.refreshToken)
         .send({
           email: "onukwilip@gmail.com",
           otp: convertTobase64("123456"),
         });
 
       expect(res.statusCode).toBe(422);
-      const data = res.body as {};
-      expect(data.toString().toLowerCase()).toContain(
-        "mode must be included".toLowerCase()
-      );
+      const data = res.body as any;
+      expect(data).toMatch(/mode.*must.*be.*login.*or.*change-password/i);
     });
-    test("Should return 422 status code if request is sent with an invalid mode header", async () => {
+    test("Should return 422 status code if request is sent with an invalid mode in the token", async () => {
+      const tokens = await generateTokens(
+        { user_ID: "prince2006", user_role: "donor", mode: "jkkmm" },
+        otpJwtSecret,
+        {
+          refresh_token: {
+            type: "time",
+            amount: 60 * 60,
+          },
+        }
+      );
+
       const res = await request(app)
         .post("/v1/otp/verify")
         .set("Api-key", convertTobase64(apiKey))
-        .set("Authorization", `Bearer ${access_token}`)
-        .set("mode", "jjk")
+        .set("Authorization", `Bearer ${tokens.accessToken}`)
+        .set("Otp-refresh-token", tokens.refreshToken)
         .send({
           email: "onukwilip@gmail.com",
           otp: convertTobase64("123456"),
         });
 
       expect(res.statusCode).toBe(422);
-      const data = res.body as {};
-      expect(data.toString().toLowerCase()).toContain(
-        "mode must be either 'login' or 'change-password'".toLowerCase()
-      );
+      const data = res.body as any;
+      expect(data).toMatch(/mode.*must.*be.*login.*or.*change-password/i);
     });
     test("Should return 422 status code if request body is invalid", async () => {
       const res = await request(app)
         .post("/v1/otp/verify")
         .set("Api-key", convertTobase64(apiKey))
-        .set("Authorization", `Bearer ${access_token}`)
-        .set("mode", "login")
+        .set("Authorization", `Bearer ${tokens?.accessToken || ""}`)
+        .set("Otp-refresh-token", tokens?.refreshToken || "")
         .send({
           email: "onukwilip@gmail.com",
         });
 
       expect(res.statusCode).toBe(422);
-      const data = res.body as {};
-      expect(data.toString().toLowerCase()).toContain(
-        "missing properties are: otp".toLowerCase()
-      );
+      const data = res.body as any;
+      expect(data).toMatch(/missing.*properties.*are:.*otp/i);
     });
     test("Should return 400 status code if OTP doesn't exist", async () => {
       await OTP.create(
@@ -199,8 +281,8 @@ describe("Test cases responsible for the OTP endpoint", () => {
       const res = await request(app)
         .post("/v1/otp/verify")
         .set("Api-key", convertTobase64(apiKey))
-        .set("Authorization", `Bearer ${access_token}`)
-        .set("mode", "login")
+        .set("Authorization", `Bearer ${tokens?.accessToken || ""}`)
+        .set("Otp-refresh-token", tokens?.refreshToken || "")
         .send({
           email: "onukwilip@gmail.com",
           otp: convertTobase64("123456"),
@@ -224,8 +306,8 @@ describe("Test cases responsible for the OTP endpoint", () => {
       const res = await request(app)
         .post("/v1/otp/verify")
         .set("Api-key", convertTobase64(apiKey))
-        .set("Authorization", `Bearer ${access_token}`)
-        .set("mode", "login")
+        .set("Authorization", `Bearer ${tokens?.accessToken || ""} `)
+        .set("Otp-refresh-token", tokens?.refreshToken || "")
         .send({
           email: "onukwilip@gmail.com",
           otp: convertTobase64("24680"),
@@ -245,24 +327,42 @@ describe("Test cases responsible for the OTP endpoint", () => {
           addTimeToDate(undefined, 60 * 60)
         )
       );
+      await UserModel.create(
+        new UserModelClass(
+          "orphanage",
+          "889888iii8",
+          "onukwilip@gmail.com",
+          "123456",
+          false
+        )
+      );
 
       const res = await request(app)
         .post("/v1/otp/verify")
         .set("Api-key", convertTobase64(apiKey))
-        .set("Authorization", `Bearer ${access_token}`)
-        .set("mode", "login")
+        .set("Authorization", `Bearer ${tokens?.accessToken || ""}`)
+        .set("Otp-refresh-token", tokens?.refreshToken || "")
         .send({
           email: "onukwilip@gmail.com",
           otp: convertTobase64("24680"),
         });
 
       expect(res.statusCode).toBe(200);
-      const data = res.body as {};
-      expect(data.toString().toLowerCase()).toBe(
-        "User email address validated. Proceed to login".toLowerCase()
-      );
+      const data = res.body as LoginEmailErrorResponseType;
+      expect(data.message).toMatch(/email.*validated/i);
     });
     test("Should return 200 status code if OTP is valid and the mode is set to 'change-password'", async () => {
+      const tokens = await generateTokens(
+        { user_ID: "prince2006", user_role: "donor", mode: "change-password" },
+        otpJwtSecret,
+        {
+          refresh_token: {
+            type: "time",
+            amount: 60 * 60,
+          },
+        }
+      );
+
       await OTP.create(
         new OTPModelClass(
           "onukwilip@gmail.com",
@@ -274,8 +374,8 @@ describe("Test cases responsible for the OTP endpoint", () => {
       const res = await request(app)
         .post("/v1/otp/verify")
         .set("Api-key", convertTobase64(apiKey))
-        .set("Authorization", `Bearer ${access_token}`)
-        .set("mode", "change-password")
+        .set("Authorization", `Bearer ${tokens.accessToken}`)
+        .set("Otp-refresh-token", tokens.refreshToken)
         .send({
           email: "onukwilip@gmail.com",
           otp: convertTobase64("24680"),
@@ -334,47 +434,73 @@ describe("Test cases responsible for the OTP endpoint", () => {
       );
     });
     test("Should return 401 status code if request is sent with an invalid access token", async () => {
-      const access_token = generateAccessToken(
+      const tokens = await generateTokens(
         { user_ID: "prince2006", user_role: "donor" },
         otpJwtSecret,
-        -(60 * 60)
+        {
+          access_token: -(60 * 60),
+          refresh_token: {
+            type: "time",
+            amount: -(60 * 60),
+          },
+        }
       );
 
       const res = await request(app)
         .post("/v1/otp/create")
         .set("Api-key", convertTobase64(apiKey))
-        .set("Authorization", `Bearer ${access_token}`)
+        .set("Authorization", `Bearer ${tokens.accessToken}`)
+        .set("Otp-refresh-token", tokens.refreshToken)
         .send({
           email: "onukwilip@gmail.com",
         });
 
       expect(res.statusCode).toBe(401);
-      const data = res.body as {};
-      expect(data.toString().toLowerCase()).toContain(
-        "unauthorized".toLowerCase()
-      );
+      const data = res.body as string;
+      expect(data).toMatch(/unauthorized/i);
     });
-    test("Should return 422 status code if request is sent without a valid mode header", async () => {
+    test("Should return 422 status code if request is sent without a valid mode in the OTP request token", async () => {
+      const tokens = await generateTokens(
+        { user_ID: "prince2006", user_role: "donor" },
+        otpJwtSecret,
+        {
+          refresh_token: {
+            type: "time",
+            amount: 60 * 60,
+          },
+        }
+      );
+
       const res = await request(app)
         .post("/v1/otp/create")
         .set("Api-key", convertTobase64(apiKey))
-        .set("Authorization", `Bearer ${access_token}`)
+        .set("Authorization", `Bearer ${tokens.accessToken}`)
+        .set("Otp-refresh-token", tokens.refreshToken)
         .send({
           email: "onukwilip@gmail.com",
         });
 
       expect(res.statusCode).toBe(422);
-      const data = res.body as {};
-      expect(data.toString().toLowerCase()).toContain(
-        "mode must be included".toLowerCase()
-      );
+      const data = res.body as string;
+      expect(data).toMatch(/mode.*must.*be.*login.*change-password/i);
     });
-    test("Should return 422 status code if request is sent with an invalid mode header", async () => {
+    test("Should return 422 status code if request is sent with an invalid mode in the OTP request token", async () => {
+      const tokens = await generateTokens(
+        { user_ID: "prince2006", user_role: "donor", mode: "kkksn" },
+        otpJwtSecret,
+        {
+          refresh_token: {
+            type: "time",
+            amount: 60 * 60,
+          },
+        }
+      );
+
       const res = await request(app)
         .post("/v1/otp/create")
         .set("Api-key", convertTobase64(apiKey))
-        .set("Authorization", `Bearer ${access_token}`)
-        .set("mode", "jjk")
+        .set("Authorization", `Bearer ${tokens.accessToken}`)
+        .set("Otp-refresh-token", tokens.refreshToken)
         .send({
           email: "onukwilip@gmail.com",
         });
@@ -389,7 +515,8 @@ describe("Test cases responsible for the OTP endpoint", () => {
       const res = await request(app)
         .post("/v1/otp/create")
         .set("Api-key", convertTobase64(apiKey))
-        .set("Authorization", `Bearer ${access_token}`)
+        .set("Authorization", `Bearer ${tokens?.accessToken || ""}`)
+        .set("Otp-refresh-token", tokens?.refreshToken || "")
         .set("mode", "login")
         .send({
           emil: "onukwilip@gmail.com",
@@ -405,8 +532,8 @@ describe("Test cases responsible for the OTP endpoint", () => {
       const res = await request(app)
         .post("/v1/otp/create")
         .set("Api-key", convertTobase64(apiKey))
-        .set("Authorization", `Bearer ${access_token}`)
-        .set("mode", "login")
+        .set("Authorization", `Bearer ${tokens?.accessToken || ""}`)
+        .set("Otp-refresh-token", tokens?.refreshToken || "")
         .send({
           email: "onukwilip@gmail.com",
         });
@@ -436,8 +563,8 @@ describe("Test cases responsible for the OTP endpoint", () => {
       const res = await request(app)
         .post("/v1/otp/create")
         .set("Api-key", convertTobase64(apiKey))
-        .set("Authorization", `Bearer ${access_token}`)
-        .set("mode", "login")
+        .set("Authorization", `Bearer ${tokens?.accessToken || ""}`)
+        .set("Otp-refresh-token", tokens?.refreshToken || "")
         .send({
           email: "onukwilip@gmail.com",
         });

@@ -445,9 +445,6 @@ export const refreshAccessToken = async (
   if (new Date(initialRefreshToken.expires_in as any) <= new Date())
     throwError<ErrorConstructor>(Error, 401, "Invalid refresh token ID");
 
-  // Delete the previous refreshToken
-  await RefrestTokenModel.deleteMany({ id: refreshTokenID });
-
   const data: TokenDataType = {
     user_ID: initialRefreshToken?.user_ID,
     user_role: initialRefreshToken?.user_role,
@@ -465,10 +462,15 @@ export const refreshAccessToken = async (
     ...data,
     expires_in: initialRefreshToken?.expires_in,
     valid_days: initialRefreshToken?.valid_days,
+  }).catch((e) => {
+    throw new Error(`Couldn't create new refresh token: ${e.message || e}`);
   });
 
   // Throw error if refresh token couldn't be created
-  if (!newRefreshToken) throw new Error("Could't create new refresh token");
+  if (!newRefreshToken) throw new Error("Couldn't create new refresh token");
+
+  // Delete the previous refreshToken
+  await RefrestTokenModel.deleteMany({ id: refreshTokenID });
 
   return { accessToken: accessToken, refreshToken: newRefreshTokenID };
 };
@@ -748,35 +750,131 @@ export const parseErrorMsg = (
  * @param res The express response object
  */
 export const setOTPTokens = async (
-  user:
-    | { _id: string; user_type: string }
-    | { user_ID: string; user_role: string },
-  res: Response
+  res: Response,
+  tokens?: TokenObjType,
+  user?: {
+    user_ID: string;
+    user_role: string;
+    mode: "login" | "change-password";
+  }
 ): Promise<TokenObjType> => {
-  // sign otp access and refresh token
-  const tokens = await generateTokens(
-    {
-      user_ID: (user as any)._id || (user as any).user_ID,
-      user_role: (user as any).user_type || (user as any).user_role,
-    },
-    otpJwtSecret,
-    { refresh_token: { type: "time", amount: 60 * 60 } }
-  );
+  // * Validate the 'tokens' parameter
+  // If the parameter is not undefined and is not an object
+  if (typeof tokens !== "undefined" && typeof tokens !== "object") {
+    throw new Error(
+      `Expected the data passed into the 'tokens' parameter to be an 'object', but instead got a '${typeof tokens}'`
+    );
+  }
+  // If the parameter is not undefined and is an array
+  if (typeof tokens !== "undefined" && Array.isArray(tokens)) {
+    throw new Error(
+      `Expected the data passed into the 'tokens' parameter to be an 'object', but instead got an 'array'`
+    );
+  }
+
+  // * Validate the 'user' parameter
+  // If the parameter is not undefined and is not an object
+  if (typeof user !== "undefined" && typeof user !== "object") {
+    throw new Error(
+      `Expected the data passed into the 'user' parameter to be an 'object', but instead got a '${typeof tokens}'`
+    );
+  }
+  // If the parameter is not undefined and is an array
+  if (typeof user !== "undefined" && Array.isArray(user)) {
+    throw new Error(
+      `Expected the data passed into the 'user' parameter to be an 'object', but instead got an 'array'`
+    );
+  }
+
+  let tokenObj = typeof tokens === "object" ? { ...tokens } : undefined;
+
+  if (!tokenObj && !user) {
+    throw new Error(
+      "Either the 'user' is specified or the 'tokens' is specified. Both cannot be 'undefined'"
+    );
+  }
+
+  if (!tokenObj) {
+    // sign otp access and refresh tokens
+    tokenObj = await generateTokens(user as any, otpJwtSecret, {
+      refresh_token: { type: "time", amount: 60 * 60 },
+    });
+  }
 
   // Set the access token to the response cookies
-  res.cookie("otp_access_token", tokens.accessToken, {
+  res.cookie("otp_access_token", tokenObj.accessToken, {
     path: "/v1/otp",
     domain: process.env.API_DOMAIN,
     httpOnly: true,
     secure: true,
   });
   // Set the refresh token to the response cookies
-  res.cookie("otp_refresh_token", tokens.accessToken, {
+  res.cookie("otp_refresh_token", tokenObj.refreshToken, {
     path: "/v1/otp",
     domain: process.env.API_DOMAIN,
     httpOnly: true,
     secure: true,
   });
 
-  return tokens;
+  return tokenObj;
+};
+
+export const setAccountTokens = async (
+  res: Response,
+  tokens?: TokenObjType,
+  tokenData?: TokenDataType
+) => {
+  // * Validate the 'tokens' parameter
+  // If the parameter is not undefined and is not an object
+  if (typeof tokens !== "undefined" && typeof tokens !== "object") {
+    throw new Error(
+      `Expected the data passed into the 'tokens' parameter to be an 'object', but instead got a '${typeof tokens}'`
+    );
+  }
+  // If the parameter is not undefined and is an array
+  if (typeof tokens !== "undefined" && Array.isArray(tokens)) {
+    throw new Error(
+      `Expected the data passed into the 'tokens' parameter to be an 'object', but instead got an 'array'`
+    );
+  }
+
+  // * Validate the 'tokenData' parameter
+  // If the parameter is not undefined and is not an object
+  if (typeof tokenData !== "undefined" && typeof tokenData !== "object") {
+    throw new Error(
+      `Expected the data passed into the 'tokenData' parameter to be an 'object', but instead got a '${typeof tokens}'`
+    );
+  }
+  // If the parameter is not undefined and is an array
+  if (typeof tokenData !== "undefined" && Array.isArray(tokenData)) {
+    throw new Error(
+      `Expected the data passed into the 'tokenData' parameter to be an 'object', but instead got an 'array'`
+    );
+  }
+
+  let tokenObj = typeof tokens === "object" ? { ...tokens } : undefined;
+
+  if (!tokenObj && !tokenData) {
+    throw new Error(
+      "Either the 'tokenObj' is specified or the 'tokenData' is specified. Both cannot be 'undefined'"
+    );
+  }
+
+  if (!tokenObj) {
+    tokenObj = await generateTokens(tokenData as any);
+  }
+
+  // Set the access and refresh tokens as cookies
+  res.cookie("access_token", tokenObj.accessToken, {
+    path: "/",
+    domain: process.env.API_DOMAIN,
+    httpOnly: true,
+    secure: true,
+  });
+  res.cookie("refresh_token", tokenObj.refreshToken, {
+    path: "/",
+    domain: process.env.API_DOMAIN,
+    httpOnly: true,
+    secure: true,
+  });
 };
