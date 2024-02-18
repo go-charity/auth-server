@@ -2,12 +2,28 @@ import { Router } from "express";
 import { loginUser } from "../controllers/login";
 import { validateApiKey } from "../utils/utils";
 
+/**
+ * @swagger
+ * tags:
+ *     - name: Login
+ *       description: The Login endpoint for authenticating usernames and passwords
+ */
+
 const loginRoutes = Router();
 
 /**
  * @swagger
  * /v1/login:
+ *  parameters:
+ *     - in: header
+ *       name: Api-key
+ *       type: string
+ *       required: true
+ *       example: ZmFlYTZkNGEyYTM4NDc1MWJjZTI5ZGI3YWEzNjA3MTg=
+ *       description: Base64 encoded API key
  *  post:
+ *     tags:
+ *          - Login
  *     summary: Authenticate a User's email and password
  *     requestBody:
  *      required: true
@@ -38,7 +54,7 @@ const loginRoutes = Router();
  *                              default: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.jF2cxRszqyIbI6XCJeXKJGm_M9f09HUOo6WfubBd9qw
  *                          refresh_token:
  *                              type: string
- *                              default: faea6d4a2a38-4751bce29db7aa360718
+ *                              default: faea6d4a2a384751bce29db7aa360718
  *      403:
  *          description: User's email address is unverified
  *          content:
@@ -54,7 +70,7 @@ const loginRoutes = Router();
  *                              default: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.jF2cxRszqyIbI6XCJeXKJGm_M9f09HUOo6WfubBd9qw
  *                          otp_refresh_token:
  *                              type: string
- *                              default: faea6d4a2a38-4751bce29db7aa360718
+ *                              default: faea6d4a2a384751bce29db7aa360718
  *      401:
  *          description: Returned when no API key is present, or user details are invalid
  *          content:
