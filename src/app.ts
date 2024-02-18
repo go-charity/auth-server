@@ -21,7 +21,9 @@ const app = express();
 const allowedOrigins = [
   process.env.CLIENT_DOMAIN,
   process.env.CLIENT_AUTH_SUB_DOMAIN,
-  process.env.SERVER_DOMAIN,
+  process.env.SERVER_LOCAL_DOMAIN,
+  process.env.SERVER_LIVE_DOMAIN,
+  process.env.SERVER_LIVE_DOMAIN2,
 ];
 
 app.use(cookieParser());
@@ -65,8 +67,12 @@ const swagger_options: swagger_js_doc.Options = {
     },
     servers: [
       {
-        url: "http://localhost:5000",
+        url: process.env.SERVER_LOCAL_DOMAIN,
       },
+      {
+        url: process.env.SERVER_LIVE_DOMAIN,
+      },
+      { url: process.env.SERVER_LIVE_DOMAIN2 },
     ],
   },
   apis: [`${__dirname}/routes/*.js`],
