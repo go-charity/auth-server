@@ -126,6 +126,73 @@ const validateModeParameter = (
   next();
 };
 
+/**
+ * @swagger
+ * /v1/otp/verify:
+ *  post:
+ *     summary: 2-factor authentication. Verify a User's one time password on registeration or password change
+ *     requestBody:
+ *      required: true
+ *      content:
+ *        application/json:
+ *           schema:
+ *            type: object
+ *            required:
+ *              - email
+ *              - otp
+ *            properties:
+ *              email:
+ *                type: string
+ *                default: johndoe@mail.com
+ *              otp:
+ *                type: string
+ *                default: 246896
+ *     responses:
+ *      201:
+ *          description: User email is verified
+ *          content:
+ *              application/json:
+ *                  schema:
+ *                      type: object
+ *                      properties:
+ *                          message:
+ *                              type: string
+ *                              default: User email validated
+ *                          access_token:
+ *                              type: string
+ *                              default: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.jF2cxRszqyIbI6XCJeXKJGm_M9f09HUOo6WfubBd9qw
+ *                          refresh_token:
+ *                              type: string
+ *                              default: faea6d4a2a384751bce29db7aa360718
+ *      401:
+ *          description: Returned when no API key is present
+ *          content:
+ *              text/plain:
+ *                  schema:
+ *                      type: string
+ *                      example: Invalid API key
+ *      400:
+ *          description: Returned when the one-time password provided is invalid or expired
+ *          content:
+ *              text/plain:
+ *                  schema:
+ *                      type: string
+ *                      example: Invalid OTP
+ *      422:
+ *          description: Returned when the request body schema is invalid
+ *          content:
+ *              text/plain:
+ *                  schema:
+ *                      type: string
+ *                      example: "'Invalid body passed. Missing keys are: The missing keys in the schema' OR 'Please validate the parameters passed, especially the ''mode'' metadata'"
+ *      500:
+ *          description: Server Error
+ *          content:
+ *              text/plain:
+ *                  schema:
+ *                      type: string
+ *                      example: Server error
+ */
 otpRoutes.post(
   "/verify",
   validateApiKey,
@@ -133,6 +200,54 @@ otpRoutes.post(
   validateModeParameter,
   verifyOTP
 );
+
+/**
+ * @swagger
+ * /v1/otp/create:
+ *  post:
+ *     summary: 2-factor authentication. Create a one time password on registeration or password change for a user and send's it to his/her email address
+ *     requestBody:
+ *      required: true
+ *      content:
+ *        application/json:
+ *           schema:
+ *            type: object
+ *            required:
+ *              - email
+ *            properties:
+ *              email:
+ *                type: string
+ *                default: johndoe@mail.com
+ *     responses:
+ *      201:
+ *          description: OTP has been generated and sent to the provided email address
+ *          content:
+ *              text/plain:
+ *                  schema:
+ *                      type: string
+ *                      example: OTP created successfully
+ *      401:
+ *          description: Returned when no API key is present
+ *          content:
+ *              text/plain:
+ *                  schema:
+ *                      type: string
+ *                      example: Invalid API key
+ *      422:
+ *          description: Returned when the request body schema is invalid
+ *          content:
+ *              text/plain:
+ *                  schema:
+ *                      type: string
+ *                      example: "'Invalid body passed. Missing keys are: The missing keys in the schema' OR 'Please validate the parameters passed, especially the ''mode'' metadata'"
+ *      500:
+ *          description: Server Error
+ *          content:
+ *              text/plain:
+ *                  schema:
+ *                      type: string
+ *                      example: Server error
+ */
 otpRoutes.post(
   "/create",
   validateApiKey,
