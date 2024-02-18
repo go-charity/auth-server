@@ -12,6 +12,12 @@ import {
 import jwt, { JwtPayload, decode } from "jsonwebtoken";
 import { TokenDataType, TokenObjType } from "../types";
 
+/**
+ * @swagger
+ * tags:
+ *     - name: 2-factor-auth
+ *       description: The endpoints responsible for implementing 2-factor authentication and verifying a user's email address
+ */
 const otpRoutes = Router();
 
 /**
@@ -129,7 +135,28 @@ const validateModeParameter = (
 /**
  * @swagger
  * /v1/otp/verify:
+ *  parameters:
+ *     - in: header
+ *       name: Api-key
+ *       type: string
+ *       required: true
+ *       example: ZmFlYTZkNGEyYTM4NDc1MWJjZTI5ZGI3YWEzNjA3MTg=
+ *       description: Base64 encoded API key
+ *     - in: header
+ *       name: Authorization
+ *       type: string
+ *       required: true
+ *       example: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.jF2cxRszqyIbI6XCJeXKJGm_M9f09HUOo6WfubBd9qw
+ *       description: OTP access token
+ *     - in: header
+ *       name: Refresh-token
+ *       type: string
+ *       required: true
+ *       example: faea6d4a2a384751bce29db7aa360718
+ *       description: OTP refresh token
  *  post:
+ *     tags:
+ *          - 2-factor-auth
  *     summary: 2-factor authentication. Verify a User's one time password on registeration or password change
  *     requestBody:
  *      required: true
@@ -204,7 +231,28 @@ otpRoutes.post(
 /**
  * @swagger
  * /v1/otp/create:
+ *  parameters:
+ *     - in: header
+ *       name: Api-key
+ *       type: string
+ *       required: true
+ *       example: ZmFlYTZkNGEyYTM4NDc1MWJjZTI5ZGI3YWEzNjA3MTg=
+ *       description: Base64 encoded API key
+ *     - in: header
+ *       name: Authorization
+ *       type: string
+ *       required: true
+ *       example: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.jF2cxRszqyIbI6XCJeXKJGm_M9f09HUOo6WfubBd9qw
+ *       description: OTP access token
+ *     - in: header
+ *       name: Refresh-token
+ *       type: string
+ *       required: true
+ *       example: faea6d4a2a384751bce29db7aa360718
+ *       description: OTP refresh token
  *  post:
+ *     tags:
+ *          - 2-factor-auth
  *     summary: 2-factor authentication. Create a one time password on registeration or password change for a user and send's it to his/her email address
  *     requestBody:
  *      required: true

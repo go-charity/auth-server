@@ -2,13 +2,40 @@ import { Router } from "express";
 import { validateAccessToken } from "../controllers/token";
 import { validateApiKey } from "../utils/utils";
 
+/**
+ * @swagger
+ * tags:
+ *     - name: Token validation
+ *       description: The endpoints responsible for validating access and refresh tokens from other microservices
+ */
 const tokenRoutes = Router();
 
 /**
  * @swagger
  * /v1/validate:
+ *  parameters:
+ *     - in: header
+ *       name: Api-key
+ *       type: string
+ *       required: true
+ *       example: ZmFlYTZkNGEyYTM4NDc1MWJjZTI5ZGI3YWEzNjA3MTg=
+ *       description: Base64 encoded API key
+ *     - in: header
+ *       name: Authorization
+ *       type: string
+ *       required: true
+ *       example: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.jF2cxRszqyIbI6XCJeXKJGm_M9f09HUOo6WfubBd9qw
+ *       description: Access token
+ *     - in: header
+ *       name: Refresh-token
+ *       type: string
+ *       required: true
+ *       example: faea6d4a2a384751bce29db7aa360718
+ *       description: Refresh token
  *  post:
- *     summary: Validates access and refresh tokens from other GO>Charity microservices
+ *     tags:
+ *          - Token validation
+ *     summary: Validates access and refresh tokens from other GO.Charity microservices
  *     requestBody:
  *      required: true
  *      content:

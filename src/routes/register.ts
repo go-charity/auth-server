@@ -2,12 +2,27 @@ import { Router } from "express";
 import { registerUser } from "../controllers/register";
 import { validateApiKey } from "../utils/utils";
 
+/**
+ * @swagger
+ * tags:
+ *     - name: Register
+ *       description: The Login endpoint for authenticating usernames and passwords
+ */
 const registerRoutes = Router();
 
 /**
  * @swagger
  * /v1/register:
+ *  parameters:
+ *     - in: header
+ *       name: Api-key
+ *       type: string
+ *       required: true
+ *       example: ZmFlYTZkNGEyYTM4NDc1MWJjZTI5ZGI3YWEzNjA3MTg=
+ *       description: Base64 encoded API key
  *  post:
+ *     tags:
+ *          - Register
  *     summary: Create a new user account
  *     requestBody:
  *      required: true
@@ -27,7 +42,7 @@ const registerRoutes = Router();
  *            properties:
  *              user_type:
  *                type: string
- *                default: orphanage/donor
+ *                default: orphanage
  *              email:
  *                type: string
  *                default: johndoe@mail.com
