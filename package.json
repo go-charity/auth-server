@@ -37,6 +37,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^7.5.0",
     "nodemailer": "^6.9.5",
+    "prom-client": "^15.1.0",
     "schema-inspector": "^2.1.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.0",
