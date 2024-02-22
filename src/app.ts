@@ -12,6 +12,7 @@ import tokenRoutes from "./routes/token";
 import swagger_js_doc from "swagger-jsdoc";
 import swagger_ui from "swagger-ui-express";
 import { options } from "./utils/utils";
+import prom_client_routes from "./routes/prom-client";
 
 config();
 connect();
@@ -44,6 +45,7 @@ app.use("/v1/register", registerRoutes);
 app.use("/v1/refresh_token", refreshTokenRoutes);
 app.use("/v1/otp", otpRoutes);
 app.use("/v1/token/", tokenRoutes);
+app.use("/metrics", prom_client_routes);
 
 /** SWagger endpoint */
 const swagger_options: swagger_js_doc.Options = {
