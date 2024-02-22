@@ -11,7 +11,7 @@ const prom_client_routes = Router();
 
 /**
  * @swagger
- * /mterics:
+ * /metrics:
  *  get:
  *     tags:
  *          - Prometheus app monitoring
