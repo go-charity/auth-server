@@ -14,6 +14,7 @@ import nodemailer from "nodemailer";
 import Mail from "nodemailer/lib/mailer";
 import inspector from "schema-inspector";
 import TempUserDetailsModel from "../models/TempUserDetails";
+import { cpus } from "os";
 
 export const apiKey = "fe132312b2fb42bebb044162ef40e3ce";
 export const jwtSecret = "88141db444b743a0bf17bbad8f7f2b48";
@@ -893,4 +894,20 @@ export const setAccountTokens = async (
     httpOnly: true,
     secure: true,
   });
+};
+
+/**
+ * Calculates the current CPU usage
+ * @returns number
+ */
+export const calculate_cpu_usage = (): number => {
+  const cpuIdle = cpus().reduce((acc, cpu) => acc + cpu.times.idle, 0);
+  const cpuTotal = cpus().reduce(
+    (acc, cpu) => acc + Object.values(cpu.times).reduce((a, b) => a + b, 0),
+    0
+  );
+  const idleTime = cpuIdle / cpus().length;
+  const totalTime = cpuTotal / cpus().length;
+  const cpuUsage = 100 - (idleTime / totalTime) * 100;
+  return cpuUsage;
 };

@@ -1,5 +1,10 @@
-import { MetricLabelClass, metric_label_enum } from "./../utils/utils";
+import {
+  MetricLabelClass,
+  calculate_cpu_usage,
+  metric_label_enum,
+} from "./../utils/utils";
 import { NextFunction, Request, Response, Send } from "express";
+import { cpuUsage, memoryUsage } from "process";
 import client from "prom-client";
 
 // * REGISTERES A NEW PROMETHEUS CLIENT
@@ -23,6 +28,7 @@ const http_response_rate_histogram = new client.Histogram({
     900.0, 950.0, 1000.0,
   ],
 });
+// * The http_request counter for measuring the total no of requests made to the application
 const http_request_total = new client.Counter({
   name: "goa_http_request_total",
   help: "The total number of HTTP requests received",
@@ -32,11 +38,25 @@ const http_request_total = new client.Counter({
     metric_label_enum.STATUS_CODE,
   ],
 });
+// * The node_js memory guage for measuring the memory of the application in use
+const nodejs_memory = new client.Gauge({
+  name: "goa_nodejs_memory_usage_bytes",
+  help: "Current memory usage of the Node.js process in bytes",
+});
+// * The node_js CPU usage guage for measuring the memory of the application in use
+const nodejs_cpu_usage = new client.Gauge({
+  name: "nodejs_cpu_usage_percent",
+  help: "CPU utilization of the Node.js process in percentage",
+});
 
 // * Registers the HTTP response rate metric
 register.registerMetric(http_response_rate_histogram);
 // * Registers the HTTP request counter metric
 register.registerMetric(http_request_total);
+// * Registers the Node Js memory guage metric
+register.registerMetric(nodejs_memory);
+// * Registers the Node Js cpu usage guage metric
+register.registerMetric(nodejs_cpu_usage);
 
 /**
  * Get's the metrics to be fed to the prometheus server
@@ -74,16 +94,27 @@ export const manage_metric_middlewares = (
 ) => {
   // Get's the Req URL object
   const req_url = new URL(req.url, `http://${req.headers.host}`);
-  // console.log(req.url, req.headers.host, req_url);
+  //! console.log(req.url, req.headers.host, req_url);
 
   // Start's the prom-client histogram timer for the request
   const endTimer = http_response_rate_histogram.startTimer();
   req.endTimer = endTimer;
+
+  //Collect's the memory usage before processing the requests
+  const used_memory_before = memoryUsage().rss;
+  //Collect's the CPU usage before processing the requests
+  const used_cpu_before = calculate_cpu_usage();
+
   // Copies the original res.send function to a variable
   const original_res_send_function = res.send;
 
   // Creates a new send function with the functionality of ending the timer, and incrementing the http_request_total metric whenever the response.send function is called
   const res_send_interceptor: any = function (this: any, body: any) {
+    //Collect's the memory usage after processing the requests
+    const used_memory_after = memoryUsage().rss;
+    //Collect's the CPU usage after processing the requests
+    const used_cpu_after = calculate_cpu_usage();
+
     // Ends the histogram timer for the request
     const timer = req.endTimer(
       new MetricLabelClass(req.method, req_url.pathname, res.statusCode)
@@ -92,15 +123,19 @@ export const manage_metric_middlewares = (
     http_request_total.inc(
       new MetricLabelClass(req.method, req_url.pathname, res.statusCode)
     );
+    // Update the nodejs_memory guage with the differences in the memory usage
+    nodejs_memory.set(used_memory_after - used_memory_before);
+    // Update the nodejs_cpu_usage guage with the differences in the cpu usage
+    nodejs_cpu_usage.set(used_cpu_after - used_cpu_before);
 
-    // console.log("Ended timer", timer);
+    // ! console.log("Ended timer", timer);
     // Calls the original response.send function
     original_res_send_function.call(this, body);
   };
 
   // Overrides the existing response.send object/property with the function defined above
   res.send = res_send_interceptor;
-  // console.log("Started timer");
+  // ! console.log("Started timer");
   next();
 };
 
