@@ -18,32 +18,6 @@ import TempUserDetailsModel from "../models/TempUserDetails";
 export const apiKey = "fe132312b2fb42bebb044162ef40e3ce";
 export const jwtSecret = "88141db444b743a0bf17bbad8f7f2b48";
 export const otpJwtSecret = "79ecc06ccddf4a68ba9b85442df62975";
-export const options = {
-  definition: {
-    openapi: "3.1.0",
-    info: {
-      title: "GO.Charity Authentication Microservice",
-      version: "0.1.0",
-      description:
-        "This is the official GO.Charity Authentication microservice for authenticating and authorizing the application's users",
-      license: {
-        name: "MIT",
-        url: "https://spdx.org/licenses/MIT.html",
-      },
-      contact: {
-        name: "GO.Charity",
-        url: "https://www.gocharity.com.ng",
-        email: "info@email.com",
-      },
-    },
-    servers: [
-      {
-        url: "http://localhost:5000",
-      },
-    ],
-  },
-  apis: ["./routes/*.js"],
-};
 
 /**
  * Converts a utf-8 string to a base64 string
@@ -67,6 +41,20 @@ export class ErrorMsg {
 
 export class TokenResponseClass {
   constructor(public access_token: string, public refresh_token: string) {}
+}
+
+export class MetricLabelClass {
+  constructor(
+    public method: string,
+    public path: string,
+    public status_code: number
+  ) {}
+}
+
+export enum metric_label_enum {
+  METHOD = "method",
+  PATH = "path",
+  STATUS_CODE = "status_code",
 }
 
 export class RefreshTokenModelClass {

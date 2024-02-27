@@ -11,8 +11,8 @@ import cookieParser from "cookie-parser";
 import tokenRoutes from "./routes/token";
 import swagger_js_doc from "swagger-jsdoc";
 import swagger_ui from "swagger-ui-express";
-import { options } from "./utils/utils";
 import prom_client_routes from "./routes/prom-client";
+import { manage_metric_middlewares } from "./controllers/prom-client";
 
 config();
 connect();
@@ -27,6 +27,7 @@ const allowedOrigins = [
   process.env.SERVER_LIVE_DOMAIN2,
 ];
 
+app.use(manage_metric_middlewares as any);
 app.use(cookieParser());
 app.use(
   cors({
@@ -46,6 +47,7 @@ app.use("/v1/refresh_token", refreshTokenRoutes);
 app.use("/v1/otp", otpRoutes);
 app.use("/v1/token/", tokenRoutes);
 app.use("/metrics", prom_client_routes);
+// app.use(endHistogramTimer as any);
 
 /** SWagger endpoint */
 const swagger_options: swagger_js_doc.Options = {
