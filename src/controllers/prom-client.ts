@@ -3,8 +3,8 @@ import {
   calculate_cpu_usage,
   metric_label_enum,
 } from "./../utils/utils";
-import { NextFunction, Request, Response, Send } from "express";
-import { cpuUsage, memoryUsage } from "process";
+import { NextFunction, Request, Response } from "express";
+import {  memoryUsage } from "process";
 import client from "prom-client";
 
 // * REGISTERES A NEW PROMETHEUS CLIENT
@@ -77,17 +77,20 @@ export const get_metrics = async (
 export const manage_metric_middlewares = (
   req: Request & {
     endTimer: (
-      labels?:
-        | Partial<
-            Record<
-              | metric_label_enum.PATH
-              | metric_label_enum.METHOD
-              | metric_label_enum.STATUS_CODE,
-              string | number
-            >
-          >
-        | undefined
-    ) => number;
+      labels?: Partial<Record<metric_label_enum, string | number>> | undefined
+    ) => void;
+    // (
+    //   labels?:
+    //     | Partial<
+    //         Record<
+    //           | metric_label_enum.PATH
+    //           | metric_label_enum.METHOD
+    //           | metric_label_enum.STATUS_CODE,
+    //           string | number
+    //         >
+    //       >
+    //     | undefined
+    // ) => number;
   },
   res: Response,
   next: NextFunction
