@@ -900,18 +900,6 @@ export const setAccountTokens = async (
  * Calculates the current CPU usage
  * @returns number
  */
-// export const calculate_cpu_usage = (): number => {
-//   const cpuIdle = cpus().reduce((acc, cpu) => acc + cpu.times.idle, 0);
-//   const cpuTotal = cpus().reduce(
-//     (acc, cpu) => acc + Object.values(cpu.times).reduce((a, b) => a + b, 0),
-//     0
-//   );
-//   const idleTime = cpuIdle / cpus().length;
-//   const totalTime = cpuTotal / cpus().length;
-//   const cpuUsage = 100 - (idleTime / totalTime) * 100;
-//   return cpuUsage;
-// };
-
 export const calculate_cpu_usage = (): number => {
   const previousTotalTime = process.hrtime()[0]; // Store previous total CPU time
 
