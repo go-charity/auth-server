@@ -14,7 +14,6 @@ import swagger_ui from "swagger-ui-express";
 import prom_client_routes from "./routes/prom-client";
 import { manage_metric_middlewares } from "./controllers/prom-client";
 import swStats from "swagger-stats";
-// import apiSpec from "swagger.json";
 
 config();
 connect();
@@ -30,10 +29,7 @@ const allowedOrigins = [
 ];
 
 app.use(manage_metric_middlewares as any);
-app.use(
-  swStats.getMiddleware()
-  // { swaggerSpec: apiSpec }
-);
+app.use(swStats.getMiddleware());
 
 app.use(cookieParser());
 app.use(
@@ -54,7 +50,6 @@ app.use("/v1/refresh_token", refreshTokenRoutes);
 app.use("/v1/otp", otpRoutes);
 app.use("/v1/token/", tokenRoutes);
 app.use("/metrics", prom_client_routes);
-// app.use(endHistogramTimer as any);
 
 /** SWagger endpoint */
 const swagger_options: swagger_js_doc.Options = {

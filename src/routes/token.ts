@@ -18,7 +18,7 @@ const tokenRoutes = Router();
  *       name: Api-key
  *       type: string
  *       required: true
- *       example: ZmFlYTZkNGEyYTM4NDc1MWJjZTI5ZGI3YWEzNjA3MTg=
+ *       example: ZmUxMzIzMTJiMmZiNDJiZWJiMDQ0MTYyZWY0MGUzY2U=
  *       description: Base64 encoded API key
  *     - in: header
  *       name: Authorization
