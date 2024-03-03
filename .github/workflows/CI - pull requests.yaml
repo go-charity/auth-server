@@ -30,6 +30,7 @@ jobs:
       - name: Run tests
         id: run-tests
         run: npm test
+        timeout-minutes: 7
       - name: Upload coverage (if fail)
         if: (failure() && steps.run-tests.outcome == 'failure') || (cancelled() && steps.run-tests.outcome == 'cancelled')
         uses: actions/upload-artifact@v3
