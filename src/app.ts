@@ -22,6 +22,7 @@ const app = express();
 
 const allowedOrigins = [
   process.env.CLIENT_DOMAIN,
+  process.env.CLIENT_DOMAIN2 || "",
   process.env.CLIENT_AUTH_SUB_DOMAIN,
   process.env.SERVER_LOCAL_DOMAIN,
   process.env.SERVER_LIVE_DOMAIN,
