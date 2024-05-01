@@ -4,7 +4,7 @@ import {
   metric_label_enum,
 } from "./../utils/utils";
 import { NextFunction, Request, Response } from "express";
-import {  memoryUsage } from "process";
+import { memoryUsage } from "process";
 import client from "prom-client";
 
 // * REGISTERES A NEW PROMETHEUS CLIENT
@@ -38,25 +38,33 @@ const http_request_total = new client.Counter({
     metric_label_enum.STATUS_CODE,
   ],
 });
-// * The node_js memory guage for measuring the memory of the application in use
+// * The node_js memory gauge for measuring the memory of the application in use
 const nodejs_memory = new client.Gauge({
   name: "goa_nodejs_memory_usage_bytes",
   help: "Current memory usage of the Node.js process in bytes",
 });
-// * The node_js CPU usage guage for measuring the memory of the application in use
+// * The node_js CPU usage gauge for measuring the memory of the application in use
 const nodejs_cpu_usage = new client.Gauge({
   name: "nodejs_cpu_usage_percent",
   help: "CPU utilization of the Node.js process in percentage",
+});
+// * The requests_in_progress gauge for measuring the number of ongoing requests in the web server
+const requests_in_progress = new client.Gauge({
+  name: "goa_requests_in_progress",
+  help: "Total number of ongoing requests/requests in progress in the web server",
+  labelNames: [metric_label_enum.PATH],
 });
 
 // * Registers the HTTP response rate metric
 register.registerMetric(http_response_rate_histogram);
 // * Registers the HTTP request counter metric
 register.registerMetric(http_request_total);
-// * Registers the Node Js memory guage metric
+// * Registers the Node Js memory gauge metric
 register.registerMetric(nodejs_memory);
-// * Registers the Node Js cpu usage guage metric
+// * Registers the Node Js cpu usage gauge metric
 register.registerMetric(nodejs_cpu_usage);
+// * Registeres the Requests in progress gauge metric
+register.registerMetric(requests_in_progress);
 
 /**
  * Get's the metrics to be fed to the prometheus server
@@ -79,18 +87,6 @@ export const manage_metric_middlewares = (
     endTimer: (
       labels?: Partial<Record<metric_label_enum, string | number>> | undefined
     ) => void;
-    // (
-    //   labels?:
-    //     | Partial<
-    //         Record<
-    //           | metric_label_enum.PATH
-    //           | metric_label_enum.METHOD
-    //           | metric_label_enum.STATUS_CODE,
-    //           string | number
-    //         >
-    //       >
-    //     | undefined
-    // ) => number;
   },
   res: Response,
   next: NextFunction
@@ -107,6 +103,9 @@ export const manage_metric_middlewares = (
   const used_memory_before = memoryUsage().rss;
   //Collect's the CPU usage before processing the requests
   const used_cpu_before = calculate_cpu_usage();
+
+  // Increment the number of ongoing requests in the web server
+  requests_in_progress.inc();
 
   // Copies the original res.send function to a variable
   const original_res_send_function = res.send;
@@ -131,6 +130,9 @@ export const manage_metric_middlewares = (
     // Update the nodejs_cpu_usage guage with the differences in the cpu usage
     nodejs_cpu_usage.set(used_cpu_after - used_cpu_before);
 
+    // Decrement the number of ongoing requests in the web server
+    requests_in_progress.dec();
+
     // ! console.log("Ended timer", timer);
     // Calls the original response.send function
     original_res_send_function.call(this, body);
@@ -141,32 +143,3 @@ export const manage_metric_middlewares = (
   // ! console.log("Started timer");
   next();
 };
-
-// const endHistogramTimer = (
-//   err: any,
-//   req: Request & {
-//     endTimer: (
-//       labels?:
-//         | Partial<Record<"route" | "method" | "status_code", string | number>>
-//         | undefined
-//     ) => number;
-//   },
-//   res: Response,
-//   next: NextFunction
-// ) => {
-//   console.log("Reached here");
-//   // console.log(req.url);
-//   const req_url = new URL(req.url, `http://${req.headers.host}`);
-//   try {
-//     const timer = req.endTimer({
-//       method: req.method,
-//       status_code: res.statusCode,
-//       route: req_url.pathname,
-//     });
-//     console.log("Ended timer", timer);
-//   } catch (error) {
-//     console.error("Couldn't end timer");
-//   }
-
-//   next();
-// };
