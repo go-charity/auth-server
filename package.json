@@ -8,7 +8,7 @@
     "url": "https://github.com/go-charity/auth-server.git"
   },
   "scripts": {
-    "test": "jest --coverage --detectOpenHandles --forceExit",
+    "test": "NODE_OPTIONS=\"$NODE_OPTIONS --experimental-vm-modules\" jest --coverage --detectOpenHandles --forceExit",
     "dev": "nodemon ./dev/index.js",
     "watch": "tsc --project tsconfig.build.json -w",
     "build": "tsc --project tsconfig.build.json",
