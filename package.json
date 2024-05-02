@@ -13,7 +13,7 @@
     "watch": "tsc --project tsconfig.build.json -w",
     "build": "tsc --project tsconfig.build.json",
     "start": "node --experimental-vm-modules ./dev/index.js",
-    "db": "docker run --name mongodb-2 -p 27017:27017 -it -d -e MONGO_INITDB_ROOT_USERNAME=onukwilip -e MONGO_INITDB_ROOT_PASSWORD=wt0YWddPUuDQhCJH  mongo:5.0.21-focal"
+    "db": "docker run --name mongodb-2 -p 27017:27017 -it -d -e MONGO_INITDB_ROOT_USERNAME=onukwilip -e MONGO_INITDB_ROOT_PASSWORD=wt0YWddPUuDQhCJH  mongo:jammy"
   },
   "keywords": [
     "GOCharity"

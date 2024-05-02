@@ -12,7 +12,11 @@ import tokenRoutes from "./routes/token";
 import swagger_js_doc from "swagger-jsdoc";
 import swagger_ui from "swagger-ui-express";
 import prom_client_routes from "./routes/prom-client";
-import { manage_metric_middlewares } from "./controllers/prom-client";
+import {
+  manage_404_middleware,
+  manage_error_middleware,
+  manage_metric_middlewares,
+} from "./controllers/prom-client";
 import swStats from "swagger-stats";
 
 config();
@@ -51,6 +55,9 @@ app.use("/v1/refresh_token", refreshTokenRoutes);
 app.use("/v1/otp", otpRoutes);
 app.use("/v1/token/", tokenRoutes);
 app.use("/metrics", prom_client_routes);
+app.get("/demo", (req, res) => {
+  throw new Error("DEMO error");
+});
 
 /** SWagger endpoint */
 const swagger_options: swagger_js_doc.Options = {
@@ -93,6 +100,30 @@ app.use(
   "/api-docs",
   swagger_ui.serve,
   swagger_ui.setup(specs, { explorer: true })
+);
+
+app.use(
+  "*",
+  // (req, res) => {
+  // console.log("Reached 404 here");
+  // res.send("this endpoint doesn't exist");
+  // }
+  manage_404_middleware as any
+);
+
+app.use(
+  // function (err: any, req: any, res: any, next: any) {
+  // if (res.headersSent) {
+  //   console.log("header sent");
+  //   next();
+  // }
+  // console.log(`REACHED ERROR FOR ${req.url}`);
+  // // next();
+  // return res
+  //   .status(err.status || 500)
+  //   .send(err.message || "404 endpoint not found");
+  // }
+  manage_error_middleware as any
 );
 
 export default app;

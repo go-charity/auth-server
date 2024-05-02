@@ -6,6 +6,7 @@ import {
 import { NextFunction, Request, Response } from "express";
 import { memoryUsage } from "process";
 import client from "prom-client";
+import { RequestType } from "../types";
 
 // * REGISTERES A NEW PROMETHEUS CLIENT
 const register = new client.Registry();
@@ -67,7 +68,7 @@ register.registerMetric(nodejs_cpu_usage);
 register.registerMetric(requests_in_progress);
 
 /**
- * Get's the metrics to be fed to the prometheus server
+ * * Get's the metrics to be fed to the prometheus server
  * @param req The express Js req object
  * @param res The express Js response object
  * @param next The express Js next function
@@ -81,18 +82,27 @@ export const get_metrics = async (
   res.send(await register.metrics());
 };
 
-// The middleware responsible for intercepting, setting the timer, and incrementing the http_request_total metric on each request
+/**
+ * * The middleware responsible for intercepting, setting the timer, and incrementing the http_request_total metric on each request
+ * @param req The Express Js request object
+ * @param res The Express Js response object
+ * @param next The Express Js next function
+ */
 export const manage_metric_middlewares = (
   req: Request & {
     endTimer: (
       labels?: Partial<Record<metric_label_enum, string | number>> | undefined
     ) => void;
+    used_memory_before: number;
+    used_cpu_before: number;
+    req_url: URL;
   },
   res: Response,
   next: NextFunction
 ) => {
   // Get's the Req URL object
   const req_url = new URL(req.url, `http://${req.headers.host}`);
+  req.req_url = req_url;
   //! console.log(req.url, req.headers.host, req_url);
 
   // Start's the prom-client histogram timer for the request
@@ -101,17 +111,24 @@ export const manage_metric_middlewares = (
 
   //Collect's the memory usage before processing the requests
   const used_memory_before = memoryUsage().rss;
+  req.used_memory_before = used_memory_before;
   //Collect's the CPU usage before processing the requests
   const used_cpu_before = calculate_cpu_usage();
+  req.used_cpu_before = used_cpu_before;
 
   // Increment the number of ongoing requests in the web server
-  requests_in_progress.inc();
+  requests_in_progress.inc({ [metric_label_enum.PATH]: req_url.pathname });
+
+  // ! REMOVE
+  console.log(
+    `Incremented requests in progress for ${req_url.pathname} endpoint`
+  );
 
   // Copies the original res.send function to a variable
   const original_res_send_function = res.send;
 
   // Creates a new send function with the functionality of ending the timer, and incrementing the http_request_total metric whenever the response.send function is called
-  const res_send_interceptor: any = function (this: any, body: any) {
+  const response_interceptor: any = function (this: any, body: any) {
     //Collect's the memory usage after processing the requests
     const used_memory_after = memoryUsage().rss;
     //Collect's the CPU usage after processing the requests
@@ -125,21 +142,101 @@ export const manage_metric_middlewares = (
     http_request_total.inc(
       new MetricLabelClass(req.method, req_url.pathname, res.statusCode)
     );
+
     // Update the nodejs_memory guage with the differences in the memory usage
     nodejs_memory.set(used_memory_after - used_memory_before);
     // Update the nodejs_cpu_usage guage with the differences in the cpu usage
     nodejs_cpu_usage.set(used_cpu_after - used_cpu_before);
 
     // Decrement the number of ongoing requests in the web server
-    requests_in_progress.dec();
+    requests_in_progress.dec({ [metric_label_enum.PATH]: req_url.pathname });
+    // ! REMOVE
+    console.log(
+      `Decremented requests in progress for ${req_url.pathname} endpoint`
+    );
 
     // ! console.log("Ended timer", timer);
     // Calls the original response.send function
     original_res_send_function.call(this, body);
   };
 
-  // Overrides the existing response.send object/property with the function defined above
-  res.send = res_send_interceptor;
+  // Overrides the existing response.send and response.json objects/properties with the function defined above
+  res.send = response_interceptor;
+  res.json = response_interceptor;
+
   // ! console.log("Started timer");
+  next();
+};
+
+/**
+ * * Function responseible for ending/decrementing all prom-client counters, timers and guages for each request on error or 404 response
+ * @param req The request object
+ * @param res The Express response object
+ */
+const end_metric_counter_and_gauges_on_error = (
+  req: RequestType,
+  res: Response
+) => {
+  // Get's the Req URL object
+
+  // ! REMOVE
+  console.log(`REACHED HERE ERROR for ${req.req_url.pathname} endpoint`);
+
+  //Collect's the memory usage after processing the requests
+  const used_memory_after = memoryUsage().rss;
+  //Collect's the CPU usage after processing the requests
+  const used_cpu_after = calculate_cpu_usage();
+
+  // Ends the histogram timer for the request
+  const timer = req.endTimer(
+    new MetricLabelClass(req.method, req.req_url.pathname, res.statusCode)
+  );
+  // Increment the http_request_total metric
+  http_request_total.inc(
+    new MetricLabelClass(req.method, req.req_url.pathname, res.statusCode)
+  );
+
+  // Update the nodejs_memory guage with the differences in the memory usage
+  nodejs_memory.set(used_memory_after - req.used_memory_before);
+  // Update the nodejs_cpu_usage guage with the differences in the cpu usage
+  nodejs_cpu_usage.set(used_cpu_after - req.used_cpu_before);
+
+  // Decrement the number of ongoing requests in the web server
+  requests_in_progress.dec({ [metric_label_enum.PATH]: req.req_url.pathname });
+  // ! REMOVE
+  console.log(
+    `Decremented requests in progress for ${req.req_url.pathname} endpoint from ERROR`
+  );
+};
+
+/**
+ * * The middleware responsible for handling uncaught errors from each endpoint in the webserver
+ * @param error The Express Js error parameter
+ * @param req The Express Js request object
+ * @param res The Express Js response object
+ * @param next The Express Js next function
+ */
+export const manage_error_middleware = (
+  error: any,
+  req: RequestType,
+  res: Response,
+  next: NextFunction
+) => {
+  end_metric_counter_and_gauges_on_error(req, res);
+  next();
+};
+
+/**
+ * * The middleware responsible for handling 404 responses in the web server. I.e. when an endpoint doesn't exist
+ * @param req The Express Js request object
+ * @param res The Express Js response object
+ * @param next The Express Js next function
+ */
+export const manage_404_middleware = (
+  req: RequestType,
+  res: Response,
+  next: NextFunction
+) => {
+  end_metric_counter_and_gauges_on_error(req, res);
   next();
 };

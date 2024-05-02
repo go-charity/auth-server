@@ -1,3 +1,5 @@
+import { metric_label_enum } from "./utils/utils";
+
 export type UserType = {
   _id?: string;
   user_type: "orphanage" | "donor";
@@ -41,4 +43,13 @@ export type LoginEmailErrorResponseType = {
   message: string;
   otp_access_token: string;
   otp_refresh_token: string;
+};
+
+export type RequestType = Request & {
+  endTimer: (
+    labels?: Partial<Record<metric_label_enum, string | number>> | undefined
+  ) => void;
+  used_memory_before: number;
+  used_cpu_before: number;
+  req_url: URL;
 };
