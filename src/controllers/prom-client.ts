@@ -126,9 +126,13 @@ export const manage_metric_middlewares = (
 
   // Copies the original res.send function to a variable
   const original_res_send_function = res.send;
+  const original_res_json_function = res.json;
+  const original_res_jsonp_function = res.jsonp;
 
-  // Creates a new send function with the functionality of ending the timer, and incrementing the http_request_total metric whenever the response.send function is called
-  const response_interceptor: any = function (this: any, body: any) {
+  /**
+   * * Creates a function with the functionality of ending the timer, and incrementing the http_request_total metric whenever the response.send function is called
+   */
+  const response_interceptor: any = function () {
     //Collect's the memory usage after processing the requests
     const used_memory_after = memoryUsage().rss;
     //Collect's the CPU usage after processing the requests
@@ -154,15 +158,43 @@ export const manage_metric_middlewares = (
     console.log(
       `Decremented requests in progress for ${req_url.pathname} endpoint`
     );
+  };
 
-    // ! console.log("Ended timer", timer);
+  /**
+   * * Function to intercept the response.send function
+   * @param this The this object for the parents' function scope
+   * @param body the body of the response
+   */
+  const response_send_interceptor: any = function (this: any, body: any) {
+    response_interceptor();
     // Calls the original response.send function
     original_res_send_function.call(this, body);
   };
+  /**
+   * * Function to intercept the response.json function
+   * @param this The this object for the parents' function scope
+   * @param body the body of the response
+   */
+  const response_json_interceptor: any = function (this: any, body: any) {
+    response_interceptor();
+    // Calls the original response.json function
+    original_res_json_function.call(this, body);
+  };
+  /**
+   * * Function to intercept the response.jsonp function
+   * @param this The this object for the parents' function scope
+   * @param body the body of the response
+   */
+  const response_jsonp_interceptor: any = function (this: any, body: any) {
+    response_interceptor();
+    // Calls the original response.jsonp function
+    original_res_jsonp_function.call(this, body);
+  };
 
-  // Overrides the existing response.send and response.json objects/properties with the function defined above
-  res.send = response_interceptor;
-  res.json = response_interceptor;
+  // Overrides the existing response.send, response.json and response.jsonp objects/properties with the function defined above
+  res.send = response_send_interceptor;
+  res.json = response_json_interceptor;
+  res.jsonp = response_jsonp_interceptor;
 
   // ! console.log("Started timer");
   next();
