@@ -828,7 +828,7 @@ export const setOTPTokens = async (
     // path: "/v1/otp",
     // domain: process.env.API_DOMAIN,
     // httpOnly: true,
-    // secure: true,
+    secure: true,
     // ! Remove
     sameSite: "none",
   });
@@ -839,7 +839,7 @@ export const setOTPTokens = async (
     // path: "/v1/otp",
     // domain: process.env.API_DOMAIN,
     // httpOnly: true,
-    // secure: true,
+    secure: true,
     // ! Remove
     sameSite: "none",
   });
@@ -898,7 +898,7 @@ export const setAccountTokens = async (
     path: "/",
     // domain: process.env.API_DOMAIN,
     // httpOnly: true,
-    // secure: true,
+    secure: true,
     // ! Remove
     sameSite: "none",
   });
@@ -907,7 +907,7 @@ export const setAccountTokens = async (
     path: "/",
     // domain: process.env.API_DOMAIN,
     // httpOnly: true,
-    // secure: true,
+    secure: true,
     // ! Remove
     sameSite: "none",
   });
