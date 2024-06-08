@@ -829,6 +829,7 @@ export const setOTPTokens = async (
     // domain: process.env.API_DOMAIN,
     // httpOnly: true,
     secure: true,
+    maxAge: 1000 * 60 * 5,
     // ! Remove
     sameSite: "none",
   });
@@ -840,6 +841,7 @@ export const setOTPTokens = async (
     // domain: process.env.API_DOMAIN,
     // httpOnly: true,
     secure: true,
+    maxAge: 1000 * 60 * 60,
     // ! Remove
     sameSite: "none",
   });
@@ -899,6 +901,7 @@ export const setAccountTokens = async (
     // domain: process.env.API_DOMAIN,
     // httpOnly: true,
     secure: true,
+    maxAge: 1000 * 60 * 5,
     // ! Remove
     sameSite: "none",
   });
@@ -908,6 +911,7 @@ export const setAccountTokens = async (
     // domain: process.env.API_DOMAIN,
     // httpOnly: true,
     secure: true,
+    maxAge: 1000 * 60 * 60 * 24 * 30,
     // ! Remove
     sameSite: "none",
   });
