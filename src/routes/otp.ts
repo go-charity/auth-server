@@ -123,12 +123,14 @@ const validateModeParameter = (
     ) as any
   )?.mode;
 
-  if (mode !== "login" && mode !== "change-password")
+  if (mode !== "login" && mode !== "change-password") {
+    console.error(`Mode: ${mode}`);
     return res
       .status(422)
       .json(
         "The OTP request's mode must be either 'login' or 'change-password'"
       );
+  }
   next();
 };
 
