@@ -822,6 +822,7 @@ export const setOTPTokens = async (
     });
   }
 
+  // TODO: UNCOMMENT THESE WHEN THE SINGLE DOMAIN HAS BEEN CONFIGURED
   // Set the access token to the response cookies
   res.cookie("otp_access_token", tokenObj.accessToken, {
     // path: "/v1/otp",
@@ -829,6 +830,8 @@ export const setOTPTokens = async (
     // httpOnly: true,
     // secure: true,
   });
+
+  // TODO: UNCOMMENT THESE WHEN THE SINGLE DOMAIN HAS BEEN CONFIGURED
   // Set the refresh token to the response cookies
   res.cookie("otp_refresh_token", tokenObj.refreshToken, {
     // path: "/v1/otp",
@@ -885,6 +888,7 @@ export const setAccountTokens = async (
     tokenObj = await generateTokens(tokenData as any);
   }
 
+  // TODO: UNCOMMENT THESE WHEN THE SINGLE DOMAIN HAS BEEN CONFIGURED
   // Set the access and refresh tokens as cookies
   res.cookie("access_token", tokenObj.accessToken, {
     path: "/",
@@ -892,6 +896,7 @@ export const setAccountTokens = async (
     // httpOnly: true,
     // secure: true,
   });
+  // TODO: UNCOMMENT THESE WHEN THE SINGLE DOMAIN HAS BEEN CONFIGURED
   res.cookie("refresh_token", tokenObj.refreshToken, {
     path: "/",
     // domain: process.env.API_DOMAIN,
