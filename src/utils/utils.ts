@@ -41,7 +41,11 @@ export class ErrorMsg {
 }
 
 export class TokenResponseClass {
-  constructor(public access_token: string, public refresh_token: string) {}
+  constructor(
+    public access_token: string,
+    public refresh_token: string,
+    public user_id?: string
+  ) {}
 }
 
 export class MetricLabelClass {

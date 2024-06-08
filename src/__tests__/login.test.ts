@@ -126,6 +126,7 @@ describe("Test cases responsible for the login endpoint", () => {
     const data = res.body as LoginResponseType;
     expect(typeof data.access_token).toBe("string");
     expect(typeof data.refresh_token).toBe("string");
+    expect(typeof data.user_id).toBe("string");
   });
   test("Should return 401 status code if password is invalid", async () => {
     const user = await UserModel.create(

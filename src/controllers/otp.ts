@@ -3,6 +3,7 @@ import {
   OTPModelClass,
   addTimeToDate,
   convertFrombase64,
+  convertTobase64,
   generateRandom6digitString,
   generateTokens,
   getOTPEmailTemplate,
@@ -138,6 +139,7 @@ export const verifyOTP = async (
         message: "User email validated",
         access_token: tokens.accessToken,
         refresh_token: tokens.refreshToken,
+        user_id: convertTobase64(userDetails._id.toString() || "undefined"),
       });
     }
     // If the mode is change-password, generate a special token for the change password endpoint

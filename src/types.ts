@@ -37,6 +37,7 @@ export type LoginResponseType = {
   message: string;
   access_token: string;
   refresh_token: string;
+  user_id: string;
 };
 
 export type LoginEmailErrorResponseType = {

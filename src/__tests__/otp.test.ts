@@ -253,6 +253,7 @@ describe("Test cases responsible for the OTP endpoint", () => {
       expect(data.message).toMatch(/email.*validated/i);
       expect(typeof data.access_token).toBe("string");
       expect(typeof data.refresh_token).toBe("string");
+      expect(typeof data.user_id).toBe("string");
     });
     test("Should return 422 status code if request is sent without a valid mode header", async () => {
       const tokens = await generateTokens(

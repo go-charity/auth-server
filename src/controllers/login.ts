@@ -5,6 +5,7 @@ import bcrypt from "bcrypt";
 import {
   TokenResponseClass,
   convertFrombase64,
+  convertTobase64,
   generateAccessToken,
   generateTokens,
   otpJwtSecret,
@@ -67,5 +68,11 @@ export const loginUser = async (req: Request, res: Response) => {
 
   return res
     .status(200)
-    .json(new TokenResponseClass(tokenObj.accessToken, tokenObj.refreshToken));
+    .json(
+      new TokenResponseClass(
+        tokenObj.accessToken,
+        tokenObj.refreshToken,
+        convertTobase64(user._id?.toString() || "undefined")
+      )
+    );
 };
