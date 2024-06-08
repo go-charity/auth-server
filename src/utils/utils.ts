@@ -829,6 +829,8 @@ export const setOTPTokens = async (
     // domain: process.env.API_DOMAIN,
     // httpOnly: true,
     // secure: true,
+    // ! Remove
+    sameSite: "none",
   });
 
   // TODO: UNCOMMENT THESE WHEN THE SINGLE DOMAIN HAS BEEN CONFIGURED
@@ -838,6 +840,8 @@ export const setOTPTokens = async (
     // domain: process.env.API_DOMAIN,
     // httpOnly: true,
     // secure: true,
+    // ! Remove
+    sameSite: "none",
   });
 
   return tokenObj;
@@ -895,6 +899,8 @@ export const setAccountTokens = async (
     // domain: process.env.API_DOMAIN,
     // httpOnly: true,
     // secure: true,
+    // ! Remove
+    sameSite: "none",
   });
   // TODO: UNCOMMENT THESE WHEN THE SINGLE DOMAIN HAS BEEN CONFIGURED
   res.cookie("refresh_token", tokenObj.refreshToken, {
@@ -902,6 +908,8 @@ export const setAccountTokens = async (
     // domain: process.env.API_DOMAIN,
     // httpOnly: true,
     // secure: true,
+    // ! Remove
+    sameSite: "none",
   });
 };
 
