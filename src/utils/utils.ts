@@ -824,14 +824,14 @@ export const setOTPTokens = async (
 
   // Set the access token to the response cookies
   res.cookie("otp_access_token", tokenObj.accessToken, {
-    path: "/v1/otp",
+    // path: "/v1/otp",
     // domain: process.env.API_DOMAIN,
     // httpOnly: true,
     // secure: true,
   });
   // Set the refresh token to the response cookies
   res.cookie("otp_refresh_token", tokenObj.refreshToken, {
-    path: "/v1/otp",
+    // path: "/v1/otp",
     // domain: process.env.API_DOMAIN,
     // httpOnly: true,
     // secure: true,
@@ -888,15 +888,15 @@ export const setAccountTokens = async (
   // Set the access and refresh tokens as cookies
   res.cookie("access_token", tokenObj.accessToken, {
     path: "/",
-    domain: process.env.API_DOMAIN,
-    httpOnly: true,
-    secure: true,
+    // domain: process.env.API_DOMAIN,
+    // httpOnly: true,
+    // secure: true,
   });
   res.cookie("refresh_token", tokenObj.refreshToken, {
     path: "/",
-    domain: process.env.API_DOMAIN,
-    httpOnly: true,
-    secure: true,
+    // domain: process.env.API_DOMAIN,
+    // httpOnly: true,
+    // secure: true,
   });
 };
 
