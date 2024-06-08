@@ -827,14 +827,14 @@ export const setOTPTokens = async (
     path: "/v1/otp",
     // domain: process.env.API_DOMAIN,
     // httpOnly: true,
-    secure: true,
+    // secure: true,
   });
   // Set the refresh token to the response cookies
   res.cookie("otp_refresh_token", tokenObj.refreshToken, {
     path: "/v1/otp",
     // domain: process.env.API_DOMAIN,
     // httpOnly: true,
-    secure: true,
+    // secure: true,
   });
 
   return tokenObj;
