@@ -1,13 +1,12 @@
 {
-  "buildCommand": "npm run build",
+  "buildCommand": "npm run build && node ./dev/index.js",
   "installCommand": "npm install -f",
-  "devCommand": "node ./dev/index.js",
   "env": {
     "MONGODB_PASSWORD": "wt0YWddPUuDQhCJH",
     "MONGODB_USERNAME": "onukwilip",
     "MONGODB_DB": "auth",
     "NODE_ENV": "production",
-    "PORT": "5000",
+    "PORT": "7000",
     "MAIL_ACCOUNT_EMAIL": "onukwilip@gmail.com",
     "MAIL_ACCOUNT_PASSWORD": "hkykhztpkqsqdqym",
     "API_DOMAIN": "auth-server.gocharity.com.ng",
