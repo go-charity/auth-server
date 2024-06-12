@@ -24,13 +24,11 @@ connect();
 
 const app = express();
 
+const parsed_origins: string = process.env.CLIENT_DOMAIN || "";
+
 const allowedOrigins = [
-  process.env.CLIENT_DOMAIN,
-  process.env.CLIENT_DOMAIN2 || "",
+  ...parsed_origins.split(","),
   process.env.CLIENT_AUTH_SUB_DOMAIN,
-  process.env.SERVER_LOCAL_DOMAIN,
-  process.env.SERVER_LIVE_DOMAIN,
-  process.env.SERVER_LIVE_DOMAIN2,
 ];
 
 app.use(manage_metric_middlewares as any);

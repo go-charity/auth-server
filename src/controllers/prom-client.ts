@@ -255,6 +255,7 @@ export const manage_error_middleware = (
   next: NextFunction
 ) => {
   end_metric_counter_and_gauges_on_error(req, res);
+  console.error(error);
   next();
 };
 
