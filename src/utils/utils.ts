@@ -823,27 +823,27 @@ export const setOTPTokens = async (
   }
 
   // TODO: UNCOMMENT THESE WHEN THE SINGLE DOMAIN HAS BEEN CONFIGURED
-  // Set the access token to the response cookies
+  // * Set the access token to the response cookies
   res.cookie("otp_access_token", tokenObj.accessToken, {
-    // path: "/v1/otp",
-    // domain: process.env.API_DOMAIN,
-    // httpOnly: true,
+    path: "/v1/otp",
+    domain: process.env.API_DOMAIN,
+    httpOnly: true,
     secure: true,
     maxAge: 1000 * 60 * 60,
     // ! Remove
-    sameSite: "none",
+    // sameSite: "none",
   });
 
   // TODO: UNCOMMENT THESE WHEN THE SINGLE DOMAIN HAS BEEN CONFIGURED
-  // Set the refresh token to the response cookies
+  // * Set the refresh token to the response cookies
   res.cookie("otp_refresh_token", tokenObj.refreshToken, {
-    // path: "/v1/otp",
-    // domain: process.env.API_DOMAIN,
-    // httpOnly: true,
+    path: "/v1/otp",
+    domain: process.env.API_DOMAIN,
+    httpOnly: true,
     secure: true,
     maxAge: 1000 * 60 * 60,
     // ! Remove
-    sameSite: "none",
+    // sameSite: "none",
   });
 
   return tokenObj;
@@ -895,25 +895,25 @@ export const setAccountTokens = async (
   }
 
   // TODO: UNCOMMENT THESE WHEN THE SINGLE DOMAIN HAS BEEN CONFIGURED
-  // Set the access and refresh tokens as cookies
+  // * Set the access and refresh tokens as cookies
   res.cookie("access_token", tokenObj.accessToken, {
     path: "/",
-    // domain: process.env.API_DOMAIN,
-    // httpOnly: true,
+    domain: process.env.API_DOMAIN,
+    httpOnly: true,
     secure: true,
     maxAge: 1000 * 60 * 60 * 24 * 30,
     // ! Remove
-    sameSite: "none",
+    // sameSite: "none",
   });
   // TODO: UNCOMMENT THESE WHEN THE SINGLE DOMAIN HAS BEEN CONFIGURED
   res.cookie("refresh_token", tokenObj.refreshToken, {
     path: "/",
-    // domain: process.env.API_DOMAIN,
-    // httpOnly: true,
+    domain: process.env.API_DOMAIN,
+    httpOnly: true,
     secure: true,
     maxAge: 1000 * 60 * 60 * 24 * 30,
     // ! Remove
-    sameSite: "none",
+    // sameSite: "none",
   });
 };
 
