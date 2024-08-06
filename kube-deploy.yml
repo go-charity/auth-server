@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-server-deployment
+  labels:
+    obj: deployment
+    app: auth-server
+spec:
+  selector:
+    matchLabels:
+      obj: pod
+      app: auth-server
+  replicas: 1
+  template:
+    metadata:
+      name: auth-server-pod
+      labels:
+        obj: pod
+        app: auth-server
+    spec:
+      containers:
+      - name: auth-server-container
+        image: gocharity/auth-server:v2
+        resources:
+          requests:
+            memory: 10Mi
+            cpu: 150m
+          limits:
+            memory: 20Mi
+            cpu: 250m
+        env:
+        - name: MONGODB_PASSWORD
+          valueFrom:
+            configMapKeyRef:
+              name: gocharity-config-map
+              key: MONGODB_PASSWORD
+        - name: MONGODB_USERNAME
+          valueFrom:
+            configMapKeyRef:
+              name: gocharity-config-map
+              key: MONGODB_USERNAME
+        - name: NODE_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: gocharity-config-map
+              key: NODE_ENV
+        - name: PORT
+          valueFrom:
+            configMapKeyRef:
+              name: gocharity-config-map
+              key: PORT
+        - name: MAIL_ACCOUNT_EMAIL
+          valueFrom:
+            configMapKeyRef:
+              name: gocharity-config-map
+              key: MAIL_ACCOUNT_EMAIL
+        - name: MAIL_ACCOUNT_PASSWORD
+          valueFrom:
+            configMapKeyRef:
+              name: gocharity-config-map
+              key: MAIL_ACCOUNT_PASSWORD
+        - name: CLIENT_DOMAIN
+          valueFrom:
+            configMapKeyRef:
+              name: gocharity-config-map
+              key: CLIENT_DOMAIN
+        - name: MONGODB_LOCAL_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: gocharity-config-map
+              key: MONGODB_LOCAL_HOST
+        - name: MONGODB_DB
+          value: auth
+        - name: API_DOMAIN
+          value: localhost
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-server-service
+  labels:
+    obj: service
+    app: auth-server
+spec:
+  selector:
+    obj: pod
+    app: auth-server
+  ports:
+  - port: 5000
+    targetPort: 5000
+    protocol: "TCP"
+  type: LoadBalancer
